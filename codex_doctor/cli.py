@@ -8,12 +8,14 @@ from typing import Annotated
 import typer
 from rich.console import Console
 from rich.panel import Panel
+from rich.prompt import IntPrompt, Prompt
 from rich.table import Table
 
 from . import __version__
 from .codex_locator import find_codex_executable
 from .current_status import CurrentStatus, diagnose_current
 from .install import hooks_installed, install_hooks, uninstall_hooks
+from .messages import describe_status
 from .network_probe import run_probe
 from .notifications import send_notification
 from .report import generate_report, write_report
@@ -110,11 +112,16 @@ def diagnose_app(
     stale_seconds: Annotated[
         int, typer.Option("--stale-seconds", help="Seconds without App events before treating as stale.")
     ] = 45,
+    lang: Annotated[
+        str,
+        typer.Option("--lang", help="Output language: zh or en."),
+    ] = "zh",
 ) -> None:
+    lang = _normalize_lang(lang)
     status = diagnose_current(
         include_network=network, stale_seconds=stale_seconds, probe_when_active=True
     )
-    console.print(render_status(status))
+    console.print(render_status(status, lang=lang))
 
 
 @app.command(name="monitor", hidden=True)
@@ -189,13 +196,24 @@ def monitor_app(
 @app.command(name="notify")
 def notify_when_stuck(
     after: Annotated[
-        float,
+        float | None,
         typer.Option("--after", help="Seconds before Codex Doctor reports a stuck active state."),
-    ] = 45.0,
+    ] = None,
     test: Annotated[
         bool,
         typer.Option("--test", help="Send one test notification and exit."),
     ] = False,
+    lang: Annotated[
+        str | None,
+        typer.Option("--lang", help="Notification language: zh or en."),
+    ] = None,
+    interactive: Annotated[
+        bool,
+        typer.Option(
+            "--interactive/--no-interactive",
+            help="Prompt for language and threshold seconds when not provided.",
+        ),
+    ] = True,
     interval: Annotated[float, typer.Option("--interval", help="Polling interval in seconds.")] = 5.0,
     network: Annotated[
         bool,
@@ -206,14 +224,14 @@ def notify_when_stuck(
     ] = True,
 ) -> None:
     if test:
-        ok = _send_feedback_notification("Test notification from Codex Doctor.")
+        test_lang = _normalize_lang(lang or "zh")
+        ok = _send_feedback_notification(_test_message(test_lang))
         if not ok:
             raise typer.Exit(1)
         return
-    console.print(
-        f"Codex Doctor is watching for stuck Codex App activity. Feedback after {after:.0f}s."
-    )
-    console.print("Press Ctrl+C to stop.")
+    lang, after = _resolve_notify_settings(lang=lang, after=after, interactive=interactive)
+    console.print(_startup_message(lang, after))
+    console.print(_stop_message(lang))
     last_notification_key = None
     current_state_key = None
     state_started_at = time.monotonic()
@@ -233,7 +251,7 @@ def notify_when_stuck(
             state_age = now - state_started_at
             key = (status.session_id, status.diagnosis.state, status.diagnosis.title)
             if _should_notify(status) and key != last_notification_key:
-                message = _notification_message(status)
+                message = _notification_message(status, lang=lang)
                 _send_feedback_notification(message)
                 console.print(message)
                 last_notification_key = key
@@ -242,7 +260,7 @@ def notify_when_stuck(
                 and state_age >= after
                 and key != stuck_notification_key
             ):
-                message = _notification_message(status, duration_seconds=state_age)
+                message = _notification_message(status, lang=lang, duration_seconds=state_age)
                 _send_feedback_notification(message)
                 console.print(message)
                 stuck_notification_key = key
@@ -288,7 +306,7 @@ def doctor() -> None:
         console.print("\nResult: Network or proxy may be blocking Codex.")
 
 
-def render_status(status: CurrentStatus) -> Panel:
+def render_status(status: CurrentStatus, *, lang: str = "zh") -> Panel:
     table = Table.grid(expand=True)
     table.add_column(ratio=1)
     table.add_row(f"[bold]Session[/bold]: {status.session_id}")
@@ -296,8 +314,17 @@ def render_status(status: CurrentStatus) -> Panel:
     table.add_row(f"[bold]Status[/bold]: {status.diagnosis.state}")
     table.add_row(f"[bold]Confidence[/bold]: {status.diagnosis.confidence.value}")
     table.add_row("")
-    table.add_row(f"[bold]Diagnosis[/bold]: {status.diagnosis.title}")
-    table.add_row(status.diagnosis.explanation)
+    message = describe_status(status, lang=lang)
+    if lang == "en":
+        table.add_row(f"[bold]Current[/bold]: {message.current}")
+        table.add_row(f"[bold]Reason[/bold]: {message.reason}")
+        table.add_row(f"[bold]Suggestion[/bold]: {message.action}")
+    else:
+        table.add_row(f"[bold]当前状况[/bold]: {message.current}")
+        table.add_row(f"[bold]堵塞原因[/bold]: {message.reason}")
+        table.add_row(f"[bold]建议[/bold]: {message.action}")
+    table.add_row("")
+    table.add_row(f"[bold]Raw[/bold]: {status.diagnosis.state} / {status.diagnosis.title}")
     if status.network_probe:
         probe = status.network_probe
         network = "OK" if probe.ok else f"FAILED ({probe.error_type})"
@@ -336,11 +363,85 @@ def _should_notify_stuck(status: CurrentStatus) -> bool:
     }
 
 
-def _notification_message(status: CurrentStatus, *, duration_seconds: float | None = None) -> str:
-    state = status.diagnosis.state
-    if duration_seconds is not None:
-        state = f"{state} for {duration_seconds:.0f}s"
-    return f"{state}: {status.diagnosis.title}"
+def _notification_message(
+    status: CurrentStatus,
+    *,
+    lang: str = "zh",
+    duration_seconds: float | None = None,
+) -> str:
+    message = describe_status(status, lang=lang, duration_seconds=duration_seconds)
+    if lang == "en":
+        return f"Current: {message.current} Reason: {message.reason} Suggestion: {message.action}"
+    return message.notification_text()
+
+
+def _normalize_lang(lang: str) -> str:
+    normalized = lang.strip().lower()
+    if normalized in {"zh", "cn", "chinese", "中文"}:
+        return "zh"
+    if normalized in {"en", "english"}:
+        return "en"
+    console.print("[red]Unsupported language. Use --lang zh or --lang en.[/red]")
+    raise typer.Exit(2)
+
+
+def _resolve_notify_settings(
+    *,
+    lang: str | None,
+    after: float | None,
+    interactive: bool,
+) -> tuple[str, float]:
+    should_prompt = interactive and sys.stdin.isatty() and (lang is None or after is None)
+    if should_prompt:
+        console.print("[bold]Codex Doctor 启动设置 / Startup Settings[/bold]")
+        resolved_lang = _prompt_language() if lang is None else _normalize_lang(lang)
+        resolved_after = _prompt_after_seconds() if after is None else _normalize_after(after)
+        return resolved_lang, resolved_after
+
+    return _normalize_lang(lang or "zh"), _normalize_after(after if after is not None else 45.0)
+
+
+def _prompt_language() -> str:
+    console.print("1. 中文")
+    console.print("2. English")
+    choice = Prompt.ask("选择语言 / Choose language", choices=["1", "2", "zh", "en"], default="1")
+    return "en" if choice in {"2", "en"} else "zh"
+
+
+def _prompt_after_seconds() -> float:
+    while True:
+        value = IntPrompt.ask("超过多少秒提醒 / Notify after seconds", default=45)
+        if value > 0:
+            return float(value)
+        console.print("[red]Seconds must be greater than 0.[/red]")
+
+
+def _normalize_after(after: float) -> float:
+    if after <= 0:
+        console.print("[red]--after must be greater than 0 seconds.[/red]")
+        raise typer.Exit(2)
+    return float(after)
+
+
+def _test_message(lang: str) -> str:
+    if lang == "en":
+        return "Test notification: Codex Doctor popups are working."
+    return "测试通知：如果你看到这条，Codex Doctor 弹窗可用。"
+
+
+def _startup_message(lang: str, after: float) -> str:
+    if lang == "en":
+        return (
+            "Codex Doctor is watching Codex App. "
+            f"It will notify when a likely stuck state lasts over {after:.0f}s."
+        )
+    return f"Codex Doctor 正在观察 Codex App。疑似卡住超过 {after:.0f} 秒会弹窗说明原因。"
+
+
+def _stop_message(lang: str) -> str:
+    if lang == "en":
+        return "Press Ctrl+C to stop."
+    return "按 Ctrl+C 停止。"
 
 
 def _send_feedback_notification(message: str) -> bool:
@@ -356,7 +457,7 @@ def _check_notifications_or_exit() -> None:
     console.print("Checking macOS notifications...")
     result = send_notification(
         "Codex Doctor",
-        "Notification self-test passed. Codex Doctor can alert you when Codex is stuck.",
+        "通知自检通过。Codex 卡住时，Codex Doctor 会提示当前状况和堵塞原因。",
     )
     if result.ok:
         console.print("[green]Notification self-test passed.[/green]")

@@ -1,3 +1,3 @@
 """Codex Doctor: local-first diagnostics for Codex CLI."""
 
-__version__ = "0.3.2"
+__version__ = "0.3.4"

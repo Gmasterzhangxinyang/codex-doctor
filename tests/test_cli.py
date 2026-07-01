@@ -5,6 +5,8 @@ from codex_doctor import cli
 from codex_doctor.cli import (
     _check_notifications_or_exit,
     _notification_message,
+    _normalize_after,
+    _resolve_notify_settings,
     _should_notify,
     _should_notify_stuck,
 )
@@ -44,7 +46,43 @@ def test_should_notify_stuck_includes_long_running_active_states():
 
 def test_notification_message_can_include_duration():
     message = _notification_message(_status(CodexState.TOOL_RUNNING), duration_seconds=61)
-    assert message.startswith("TOOL_RUNNING for 61s:")
+    assert "当前：" in message
+    assert "堵塞原因" not in message
+    assert "原因：" in message
+    assert "已经 61 秒" in message
+    assert "卡在本地工具执行阶段" in message
+
+
+def test_notification_message_supports_english():
+    message = _notification_message(
+        _status(CodexState.TOOL_RUNNING),
+        lang="en",
+        duration_seconds=61,
+    )
+
+    assert message.startswith("Current:")
+    assert "Reason:" in message
+    assert "Suggestion:" in message
+    assert "61s" in message
+
+
+def test_resolve_notify_settings_uses_defaults_without_interactive_prompt():
+    lang, after = _resolve_notify_settings(lang=None, after=None, interactive=False)
+
+    assert lang == "zh"
+    assert after == 45.0
+
+
+def test_resolve_notify_settings_uses_explicit_values():
+    lang, after = _resolve_notify_settings(lang="en", after=30, interactive=False)
+
+    assert lang == "en"
+    assert after == 30.0
+
+
+def test_normalize_after_rejects_non_positive_values():
+    with pytest.raises(typer.Exit):
+        _normalize_after(0)
 
 
 def test_check_notifications_exits_on_failure(monkeypatch):

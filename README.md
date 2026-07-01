@@ -72,6 +72,15 @@ For Codex App users, run the small stuck notifier:
 codex-doctor notify
 ```
 
+Startup asks for two choices:
+
+```text
+1. 中文
+2. English
+选择语言 / Choose language [1/2/zh/en]
+超过多少秒提醒 / Notify after seconds [45]
+```
+
 Test whether macOS notifications are actually allowed on your machine:
 
 ```bash
@@ -84,10 +93,25 @@ Make it report faster:
 codex-doctor notify --after 20
 ```
 
+Skip startup choices with explicit options:
+
+```bash
+codex-doctor notify --lang zh --after 30
+codex-doctor notify --lang en --after 60
+```
+
 That is the main workflow: keep it open while using Codex App. It sends a macOS
 notification only when Codex Doctor thinks Codex is stuck and can explain why.
 If macOS notifications are blocked, Codex Doctor prints the stuck feedback in
 the terminal instead of pretending the popup worked.
+
+Notification text is intentionally simple Chinese:
+
+```text
+当前：Codex 已经 61 秒卡在本地工具执行阶段。
+原因：检测到工具 exec_command 已经启动，但还没看到完成输出。
+建议：看终端/工具是否还在跑；可能是测试、构建、shell 命令或文件操作耗时。
+```
 
 For a one-shot debug check:
 
@@ -149,6 +173,7 @@ See [Privacy](docs/privacy.md) and [Security Policy](SECURITY.md).
 codex-doctor install
 codex-doctor notify
 codex-doctor notify --test
+codex-doctor notify --lang zh --after 30
 codex-doctor notify --after 20
 codex-doctor diagnose
 codex-doctor uninstall

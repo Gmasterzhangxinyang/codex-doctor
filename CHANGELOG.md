@@ -20,6 +20,16 @@
 - Keep `codex-doctor watch` running when the local Codex Doctor SQLite database is temporarily unavailable.
 - Continue showing Codex App fallback activity when hook/wrapper storage cannot be opened.
 
+## 0.3.4
+
+- Make `codex-doctor notify` prompt for language and stuck threshold seconds when options are not provided.
+- Keep `--lang zh|en` and `--after <seconds>` for users who want to skip the startup choices.
+
+## 0.3.3
+
+- Add Chinese stuck feedback with current situation, likely blockage reason, and suggested next step.
+- Use the Chinese feedback in notifications and one-shot diagnosis output.
+
 ## 0.3.2
 
 - Make `codex-doctor install` verify macOS notification delivery by default.
