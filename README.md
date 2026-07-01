@@ -69,6 +69,12 @@ For Codex App users, run the small stuck notifier:
 codex-doctor notify
 ```
 
+Test whether macOS notifications are actually allowed on your machine:
+
+```bash
+codex-doctor notify --test
+```
+
 Make it report faster:
 
 ```bash
@@ -77,6 +83,8 @@ codex-doctor notify --after 20
 
 That is the main workflow: keep it open while using Codex App. It sends a macOS
 notification only when Codex Doctor thinks Codex is stuck and can explain why.
+If macOS notifications are blocked, Codex Doctor prints the stuck feedback in
+the terminal instead of pretending the popup worked.
 
 For a one-shot debug check:
 
@@ -137,6 +145,7 @@ See [Privacy](docs/privacy.md) and [Security Policy](SECURITY.md).
 ```bash
 codex-doctor install
 codex-doctor notify
+codex-doctor notify --test
 codex-doctor notify --after 20
 codex-doctor diagnose
 codex-doctor uninstall

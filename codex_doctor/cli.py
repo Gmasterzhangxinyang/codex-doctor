@@ -15,7 +15,7 @@ from .codex_locator import find_codex_executable
 from .current_status import CurrentStatus, diagnose_current
 from .install import hooks_installed, install_hooks, uninstall_hooks
 from .network_probe import run_probe
-from .notifications import notify
+from .notifications import send_notification
 from .report import generate_report, write_report
 from .runner import run_codex
 from .storage import Storage
@@ -165,10 +165,10 @@ def monitor_app(
                 and key != stuck_notification_key
             )
             if should_notify and key != last_notification_key:
-                notify("Codex Doctor", _notification_message(status))
+                _send_feedback_notification(_notification_message(status))
                 last_notification_key = key
             elif should_notify_stuck:
-                notify("Codex Doctor", _notification_message(status, duration_seconds=state_age))
+                _send_feedback_notification(_notification_message(status, duration_seconds=state_age))
                 stuck_notification_key = key
             time.sleep(interval)
     except KeyboardInterrupt:
@@ -181,6 +181,10 @@ def notify_when_stuck(
         float,
         typer.Option("--after", help="Seconds before Codex Doctor reports a stuck active state."),
     ] = 45.0,
+    test: Annotated[
+        bool,
+        typer.Option("--test", help="Send one test notification and exit."),
+    ] = False,
     interval: Annotated[float, typer.Option("--interval", help="Polling interval in seconds.")] = 5.0,
     network: Annotated[
         bool,
@@ -190,6 +194,11 @@ def notify_when_stuck(
         ),
     ] = True,
 ) -> None:
+    if test:
+        ok = _send_feedback_notification("Test notification from Codex Doctor.")
+        if not ok:
+            raise typer.Exit(1)
+        return
     console.print(
         f"Codex Doctor is watching for stuck Codex App activity. Feedback after {after:.0f}s."
     )
@@ -214,7 +223,7 @@ def notify_when_stuck(
             key = (status.session_id, status.diagnosis.state, status.diagnosis.title)
             if _should_notify(status) and key != last_notification_key:
                 message = _notification_message(status)
-                notify("Codex Doctor", message)
+                _send_feedback_notification(message)
                 console.print(message)
                 last_notification_key = key
             elif (
@@ -223,7 +232,7 @@ def notify_when_stuck(
                 and key != stuck_notification_key
             ):
                 message = _notification_message(status, duration_seconds=state_age)
-                notify("Codex Doctor", message)
+                _send_feedback_notification(message)
                 console.print(message)
                 stuck_notification_key = key
             time.sleep(interval)
@@ -321,3 +330,12 @@ def _notification_message(status: CurrentStatus, *, duration_seconds: float | No
     if duration_seconds is not None:
         state = f"{state} for {duration_seconds:.0f}s"
     return f"{state}: {status.diagnosis.title}"
+
+
+def _send_feedback_notification(message: str) -> bool:
+    result = send_notification("Codex Doctor", message)
+    if not result.ok:
+        console.print(f"[yellow]Notification failed:[/yellow] {result.error}")
+        console.print("Codex Doctor will still print stuck feedback in this terminal.")
+        return False
+    return True
