@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from pathlib import Path
 
 from .constants import APP_NAME
@@ -21,6 +22,24 @@ def user_data_dir() -> Path:
         if os.uname().sysname == "Darwin":
             return Path.home() / "Library" / "Application Support" / APP_NAME
         return Path.home() / ".local" / "share" / APP_NAME
+
+
+def fallback_data_dir() -> Path:
+    return Path(tempfile.gettempdir()) / APP_NAME
+
+
+def ensure_user_data_dir() -> Path:
+    path = user_data_dir()
+    try:
+        path.mkdir(parents=True, exist_ok=True)
+        probe = path / ".write-test"
+        probe.write_text("", encoding="utf-8")
+        probe.unlink(missing_ok=True)
+        return path
+    except OSError:
+        fallback = fallback_data_dir()
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
 
 
 def db_path() -> Path:

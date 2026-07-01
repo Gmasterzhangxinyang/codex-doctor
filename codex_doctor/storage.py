@@ -11,8 +11,13 @@ from .schemas import Diagnosis, Event, NetworkProbe, Session
 
 class Storage:
     def __init__(self, db_file: Path | None = None, jsonl_file: Path | None = None) -> None:
-        self.db_file = db_file or config.db_path()
-        self.jsonl_file = jsonl_file or config.jsonl_path()
+        if db_file is None or jsonl_file is None:
+            data_dir = config.ensure_user_data_dir()
+            self.db_file = db_file if db_file is not None else data_dir / "codex-doctor.db"
+            self.jsonl_file = jsonl_file if jsonl_file is not None else data_dir / "events.jsonl"
+        else:
+            self.db_file = db_file
+            self.jsonl_file = jsonl_file
         self.db_file.parent.mkdir(parents=True, exist_ok=True)
         self.jsonl_file.parent.mkdir(parents=True, exist_ok=True)
         self.init_db()

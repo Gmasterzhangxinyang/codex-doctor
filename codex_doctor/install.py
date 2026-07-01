@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .config import hooks_path, user_data_dir
+from .config import ensure_user_data_dir, hooks_path, user_data_dir
 from .constants import HOOK_COMMAND, MANAGED_MARKER
 
 HOOK_EVENTS = [
@@ -63,7 +63,7 @@ def install_hooks(scope: str = "user", force: bool = False, project_dir: Path | 
         shutil.copy2(path, backup)
     merged = merge_hooks(current, desired_hooks())
     path.write_text(json.dumps(merged, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-    user_data_dir().mkdir(parents=True, exist_ok=True)
+    ensure_user_data_dir()
     return path
 
 
