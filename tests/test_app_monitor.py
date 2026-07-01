@@ -14,6 +14,17 @@ def test_latest_app_activity_reads_only_safe_event_metadata(tmp_path):
             [
                 json.dumps(
                     {
+                        "timestamp": "2026-07-01T07:59:59.000Z",
+                        "type": "turn_context",
+                        "payload": {
+                            "cwd": str(tmp_path / "projects" / "codex-doctor"),
+                            "workspace_roots": [str(tmp_path / "projects" / "codex-doctor")],
+                            "summary": "private summary",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
                         "timestamp": "2026-07-01T08:00:00.000Z",
                         "type": "response_item",
                         "payload": {
@@ -44,6 +55,7 @@ def test_latest_app_activity_reads_only_safe_event_metadata(tmp_path):
 
     assert activity is not None
     assert activity.session_id == session_id
+    assert activity.project_path == tmp_path / "projects" / "codex-doctor"
     assert activity.events[-1].payload_type == "function_call_output"
     assert "private output" not in activity.events[-1].label
 

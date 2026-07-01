@@ -42,6 +42,7 @@ class AppActivity:
     path: Path
     updated_at: datetime
     events: list[AppEventSummary]
+    project_path: Path | None = None
 
 
 def latest_app_activity(codex_home: Path | None = None) -> AppActivity | None:
@@ -64,6 +65,7 @@ def latest_app_activity(codex_home: Path | None = None) -> AppActivity | None:
         path=latest,
         updated_at=events[-1].ts,
         events=events,
+        project_path=read_app_project_path(latest),
     )
 
 
@@ -139,6 +141,24 @@ def read_app_events(path: Path) -> list[AppEventSummary]:
     return events[-40:]
 
 
+def read_app_project_path(path: Path) -> Path | None:
+    for line in reversed(_tail_lines(path)):
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        payload = row.get("payload")
+        payload = payload if isinstance(payload, dict) else {}
+        raw_path = (
+            _safe_str(payload.get("cwd"))
+            or _workspace_root(payload.get("workspace_roots"))
+            or _safe_str(row.get("cwd"))
+        )
+        if raw_path:
+            return Path(raw_path).expanduser()
+    return None
+
+
 def _summarize_row(row: dict[str, Any]) -> AppEventSummary | None:
     ts_raw = row.get("timestamp")
     if not isinstance(ts_raw, str):
@@ -193,6 +213,18 @@ def _parse_ts(value: str) -> datetime:
 
 def _safe_str(value: Any) -> str | None:
     return value if isinstance(value, str) else None
+
+
+def _workspace_root(value: Any) -> str | None:
+    if isinstance(value, list):
+        for item in value:
+            if isinstance(item, str):
+                return item
+            if isinstance(item, dict):
+                path = _safe_str(item.get("path")) or _safe_str(item.get("root"))
+                if path:
+                    return path
+    return None
 
 
 def _session_id_from_path(path: Path) -> str:

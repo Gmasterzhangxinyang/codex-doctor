@@ -311,6 +311,9 @@ def render_status(status: CurrentStatus, *, lang: str = "zh") -> Panel:
     table.add_column(ratio=1)
     table.add_row(f"[bold]Session[/bold]: {status.session_id}")
     table.add_row(f"[bold]Source[/bold]: {status.source}")
+    project = _project_display(status)
+    if project:
+        table.add_row(f"[bold]Project[/bold]: {project}")
     table.add_row(f"[bold]Status[/bold]: {status.diagnosis.state}")
     table.add_row(f"[bold]Confidence[/bold]: {status.diagnosis.confidence.value}")
     table.add_row("")
@@ -370,9 +373,13 @@ def _notification_message(
     duration_seconds: float | None = None,
 ) -> str:
     message = describe_status(status, lang=lang, duration_seconds=duration_seconds)
+    project = _project_name(status) or status.session_id[:8]
     if lang == "en":
-        return f"Current: {message.current} Reason: {message.reason} Suggestion: {message.action}"
-    return message.notification_text()
+        return (
+            f"Project: {project} Current: {message.current} "
+            f"Reason: {message.reason} Suggestion: {message.action}"
+        )
+    return f"项目：{project} {message.notification_text()}"
 
 
 def _normalize_lang(lang: str) -> str:
@@ -442,6 +449,20 @@ def _stop_message(lang: str) -> str:
     if lang == "en":
         return "Press Ctrl+C to stop."
     return "按 Ctrl+C 停止。"
+
+
+def _project_name(status: CurrentStatus) -> str | None:
+    if not status.project_path:
+        return None
+    return status.project_path.name or str(status.project_path)
+
+
+def _project_display(status: CurrentStatus) -> str | None:
+    if not status.project_path:
+        return None
+    name = _project_name(status)
+    path = str(status.project_path)
+    return f"{name} ({path})" if name and name != path else path
 
 
 def _send_feedback_notification(message: str) -> bool:

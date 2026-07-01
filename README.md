@@ -108,10 +108,14 @@ the terminal instead of pretending the popup worked.
 Notification text is intentionally simple Chinese:
 
 ```text
+项目：codex-doctor
 当前：Codex 已经 61 秒卡在本地工具执行阶段。
 原因：检测到工具 exec_command 已经启动，但还没看到完成输出。
 建议：看终端/工具是否还在跑；可能是测试、构建、shell 命令或文件操作耗时。
 ```
+
+When several Codex App projects are open, the notification includes the project
+name from the local session `cwd`. `diagnose` also shows the full project path.
 
 For a one-shot debug check:
 

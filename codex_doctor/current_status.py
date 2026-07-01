@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 
 from .app_monitor import AppActivity, AppEventSummary, diagnose_app_activity, latest_app_activity
 from .network_probe import run_probe
@@ -18,6 +19,7 @@ class CurrentStatus:
     session_id: str
     app_activity: AppActivity | None = None
     app_events: list[AppEventSummary] | None = None
+    project_path: Path | None = None
     network_probe: NetworkProbe | None = None
     storage_error: str | None = None
 
@@ -141,6 +143,7 @@ def _status_from_app_activity(
         session_id=activity.session_id,
         app_activity=activity,
         app_events=activity.events,
+        project_path=activity.project_path,
     )
 
 
@@ -185,6 +188,7 @@ def _with_network_interpretation(
         session_id=status.session_id,
         app_activity=status.app_activity,
         app_events=status.app_events,
+        project_path=status.project_path,
         network_probe=probe,
         storage_error=status.storage_error,
     )

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 import typer
 
@@ -16,7 +18,7 @@ from codex_doctor.schemas import Confidence, Diagnosis
 from codex_doctor.state_machine import CodexState
 
 
-def _status(state: CodexState) -> CurrentStatus:
+def _status(state: CodexState, project_path: Path | None = None) -> CurrentStatus:
     return CurrentStatus(
         diagnosis=Diagnosis(
             state=state.value,
@@ -26,6 +28,7 @@ def _status(state: CodexState) -> CurrentStatus:
         ),
         source="test",
         session_id="s1",
+        project_path=project_path,
     )
 
 
@@ -45,8 +48,12 @@ def test_should_notify_stuck_includes_long_running_active_states():
 
 
 def test_notification_message_can_include_duration():
-    message = _notification_message(_status(CodexState.TOOL_RUNNING), duration_seconds=61)
+    message = _notification_message(
+        _status(CodexState.TOOL_RUNNING, Path("/Users/bobby/Documents/codex-doctor")),
+        duration_seconds=61,
+    )
     assert "当前：" in message
+    assert "项目：codex-doctor" in message
     assert "堵塞原因" not in message
     assert "原因：" in message
     assert "已经 61 秒" in message
@@ -55,12 +62,12 @@ def test_notification_message_can_include_duration():
 
 def test_notification_message_supports_english():
     message = _notification_message(
-        _status(CodexState.TOOL_RUNNING),
+        _status(CodexState.TOOL_RUNNING, Path("/Users/bobby/Documents/codex-doctor")),
         lang="en",
         duration_seconds=61,
     )
 
-    assert message.startswith("Current:")
+    assert message.startswith("Project: codex-doctor Current:")
     assert "Reason:" in message
     assert "Suggestion:" in message
     assert "61s" in message

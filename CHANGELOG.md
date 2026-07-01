@@ -20,6 +20,11 @@
 - Keep `codex-doctor watch` running when the local Codex Doctor SQLite database is temporarily unavailable.
 - Continue showing Codex App fallback activity when hook/wrapper storage cannot be opened.
 
+## 0.3.5
+
+- Include the Codex App project name in stuck notifications.
+- Show the full detected project path in `codex-doctor diagnose`.
+
 ## 0.3.4
 
 - Make `codex-doctor notify` prompt for language and stuck threshold seconds when options are not provided.
