@@ -20,6 +20,10 @@
 - Keep `codex-doctor watch` running when the local Codex Doctor SQLite database is temporarily unavailable.
 - Continue showing Codex App fallback activity when hook/wrapper storage cannot be opened.
 
+## 0.2.1
+
+- Add `codex-doctor monitor --notify --notify-all` for users who want notifications on normal Codex App activity changes, not only stuck/error states.
+
 ## 0.2.0
 
 - Add `codex-doctor diagnose` as the primary Codex App-friendly one-shot diagnosis command.

@@ -83,6 +83,12 @@ Keep a lightweight monitor running and notify when Codex looks stuck:
 codex-doctor monitor --notify
 ```
 
+Notify on every status change, including normal App activity:
+
+```bash
+codex-doctor monitor --notify --notify-all
+```
+
 Run Codex through the wrapper when you want the most complete local evidence:
 
 ```bash
@@ -183,6 +189,7 @@ See [Privacy](docs/privacy.md) and [Security Policy](SECURITY.md).
 codex-doctor install
 codex-doctor diagnose
 codex-doctor monitor --notify
+codex-doctor monitor --notify --notify-all
 codex-doctor run
 codex-doctor watch
 codex-doctor report --last

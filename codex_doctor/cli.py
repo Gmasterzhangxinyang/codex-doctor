@@ -110,6 +110,13 @@ def monitor_app(
     notify_user: Annotated[
         bool, typer.Option("--notify", help="Send macOS notification when Codex looks stuck.")
     ] = False,
+    notify_all: Annotated[
+        bool,
+        typer.Option(
+            "--notify-all",
+            help="Notify on every status change, including active App activity.",
+        ),
+    ] = False,
     interval: Annotated[float, typer.Option("--interval", help="Polling interval in seconds.")] = 5.0,
     stale_seconds: Annotated[
         int, typer.Option("--stale-seconds", help="Seconds without App events before treating as stale.")
@@ -129,7 +136,8 @@ def monitor_app(
             console.clear()
             console.print(render_status(status))
             key = (status.session_id, status.diagnosis.state, status.diagnosis.title)
-            if notify_user and _should_notify(status) and key != last_notification_key:
+            should_notify = notify_user and _should_notify(status, notify_all=notify_all)
+            if should_notify and key != last_notification_key:
                 notify("Codex Doctor", f"{status.diagnosis.state}: {status.diagnosis.title}")
                 last_notification_key = key
             time.sleep(interval)
@@ -201,7 +209,9 @@ def render_status(status: CurrentStatus) -> Panel:
     return Panel(table, title="Codex Doctor Diagnose")
 
 
-def _should_notify(status: CurrentStatus) -> bool:
+def _should_notify(status: CurrentStatus, *, notify_all: bool = False) -> bool:
+    if notify_all:
+        return status.diagnosis.state != "IDLE"
     return status.diagnosis.state in {
         "NETWORK_SUSPECTED",
         "API_OR_MODEL_WAITING",
