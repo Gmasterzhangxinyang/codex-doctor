@@ -43,6 +43,7 @@ Check the Codex UI for a permission prompt.
 - Real-time dashboard with `codex-doctor watch`.
 - PTY wrapper mode with `codex-doctor run`.
 - Hook recorder for Codex lifecycle events.
+- Best-effort Codex App fallback that reads local rollout event metadata when hooks are not emitted.
 - curl-first OpenAI network probe with Python fallback.
 - Process-tree sampling with CPU, memory, and child process visibility.
 - SQLite plus JSONL local storage.
@@ -144,6 +145,7 @@ Codex Doctor combines four local evidence sources:
 4. OpenAI network probes.
 
 Those signals feed a small state machine that emits a current diagnosis and a reportable timeline.
+When Codex App does not emit hooks for a visible App session, `watch` can fall back to the latest local rollout file and display only safe event metadata such as `reasoning`, `function_call`, and `function_call_output`.
 
 See [Architecture](docs/architecture.md) and [Event Model](docs/events.md).
 

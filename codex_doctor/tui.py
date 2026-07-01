@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import time
 
+from .app_monitor import diagnose_app_activity, latest_app_activity
 from .report import _event_from_row, _probe_from_row
+from .schemas import Confidence, Diagnosis
 from .state_machine import diagnose
 from .storage import Storage
 
@@ -17,18 +19,49 @@ def watch(session: str = "latest", refresh_seconds: float = 1.0) -> None:
     storage = Storage()
 
     def render():
-        selected = storage.get_latest_session() if session == "latest" else None
-        session_id = selected["id"] if selected else session
-        rows = list(reversed(storage.list_recent_events(session_id=session_id, limit=30)))
-        events = [_event_from_row(row) for row in rows]
-        probe_row = storage.latest_probe(session_id=session_id)
-        probe = _probe_from_row(probe_row) if probe_row else None
-        process = storage.latest_process_sample(session_id=session_id)
-        diagnosis = diagnose(events, probe=probe, process_sample=dict(process) if process else None)
+        storage_error = None
+        selected = None
+        session_id = session
+        events = []
+        probe = None
+        process = None
+        try:
+            selected = storage.get_latest_session() if session == "latest" else None
+            session_id = selected["id"] if selected else session
+            rows = list(reversed(storage.list_recent_events(session_id=session_id, limit=30)))
+            events = [_event_from_row(row) for row in rows]
+            probe_row = storage.latest_probe(session_id=session_id)
+            probe = _probe_from_row(probe_row) if probe_row else None
+            process = storage.latest_process_sample(session_id=session_id)
+            diagnosis = diagnose(events, probe=probe, process_sample=dict(process) if process else None)
+        except Exception as exc:
+            storage_error = str(exc)
+            diagnosis = Diagnosis(
+                state="IDLE",
+                confidence=Confidence.LOW,
+                title="Codex Doctor storage is temporarily unavailable.",
+                explanation=(
+                    "The local Codex Doctor database could not be opened. "
+                    "The dashboard will keep trying and can still show Codex App fallback activity."
+                ),
+                evidence={"error": storage_error},
+            )
+        source = "Codex Doctor hooks/wrapper"
+        app_error = None
+        try:
+            app_activity = latest_app_activity() if session == "latest" else None
+        except Exception as exc:
+            app_activity = None
+            app_error = str(exc)
+        latest_doctor_ts = events[-1].ts if events else None
+        if app_activity and (latest_doctor_ts is None or app_activity.updated_at > latest_doctor_ts):
+            diagnosis = diagnose_app_activity(app_activity)
+            source = "Codex App rollout fallback"
 
         table = Table.grid(expand=True)
         table.add_column(ratio=1)
         table.add_row(f"[bold]Session[/bold]: {session_id}")
+        table.add_row(f"[bold]Source[/bold]: {source}")
         table.add_row(f"[bold]Status[/bold]: {diagnosis.state}")
         table.add_row(f"[bold]Confidence[/bold]: {diagnosis.confidence.value}")
         table.add_row("")
@@ -44,11 +77,19 @@ def watch(session: str = "latest", refresh_seconds: float = 1.0) -> None:
                 f"CPU={process['cpu_percent']} MEM={process['memory_rss_mb']}MB "
                 f"children={process['child_count']}"
             )
+        if storage_error:
+            table.add_row(f"[bold red]Storage[/bold red]: {storage_error}")
+        if app_error:
+            table.add_row(f"[bold red]App fallback[/bold red]: {app_error}")
         table.add_row("")
         table.add_row("[bold]Last events[/bold]:")
-        for event in events[-8:]:
-            suffix = f" {event.tool_name}" if event.tool_name else ""
-            table.add_row(f"{event.ts.strftime('%H:%M:%S')} {event.event_type}{suffix}")
+        if source == "Codex App rollout fallback" and app_activity:
+            for event in app_activity.events[-8:]:
+                table.add_row(f"{event.ts.strftime('%H:%M:%S')} {event.label}")
+        else:
+            for event in events[-8:]:
+                suffix = f" {event.tool_name}" if event.tool_name else ""
+                table.add_row(f"{event.ts.strftime('%H:%M:%S')} {event.event_type}{suffix}")
         return Panel(table, title="Codex Doctor")
 
     try:
