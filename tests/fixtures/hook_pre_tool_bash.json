@@ -1,0 +1,9 @@
+{
+  "hook_event_name": "PreToolUse",
+  "session_id": "test-session",
+  "cwd": "/tmp/repo",
+  "tool_name": "Bash",
+  "tool_input": {
+    "command": "pytest tests/"
+  }
+}

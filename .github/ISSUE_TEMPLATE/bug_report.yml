@@ -1,0 +1,35 @@
+name: Bug report
+description: Report something broken in Codex Doctor.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve Codex Doctor. Please avoid pasting secrets, API keys, full prompts, or private command output.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Run ...
+        2. See ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Codex Doctor version
+      placeholder: codex-doctor --version
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Paste redacted output from codex-doctor doctor or codex-doctor report --last.

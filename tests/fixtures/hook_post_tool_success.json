@@ -1,0 +1,7 @@
+{
+  "hook_event_name": "PostToolUse",
+  "session_id": "test-session",
+  "tool_name": "Bash",
+  "success": true,
+  "duration_ms": 1200
+}

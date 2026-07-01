@@ -1,0 +1,24 @@
+name: Feature request
+description: Suggest a new diagnostic, integration, or workflow.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What is hard to understand or diagnose today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: What would you like Codex Doctor to do?
+    validations:
+      required: true
+  - type: textarea
+    id: signals
+    attributes:
+      label: Observable signals
+      description: Which local signals could support this without exposing hidden reasoning or private content?

@@ -1,0 +1,2 @@
+{"source":"hook","event_type":"UserPromptSubmit","session_id":"demo"}
+{"source":"hook","event_type":"PreToolUse","tool_name":"Bash","session_id":"demo"}

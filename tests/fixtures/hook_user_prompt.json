@@ -1,0 +1,7 @@
+{
+  "hook_event_name": "UserPromptSubmit",
+  "session_id": "test-session",
+  "cwd": "/tmp/repo",
+  "model": "gpt-5",
+  "prompt": "Please fix the tests"
+}

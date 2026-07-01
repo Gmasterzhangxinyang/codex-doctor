@@ -1,0 +1,6 @@
+┌ Codex Doctor ─────────────────────────────────────────┐
+│ Session: 20260701-143812                              │
+│ Status: TOOL_RUNNING                                  │
+│ Confidence: HIGH                                      │
+│ Diagnosis: Codex is waiting for a local tool to finish │
+└────────────────────────────────────────────────────────┘

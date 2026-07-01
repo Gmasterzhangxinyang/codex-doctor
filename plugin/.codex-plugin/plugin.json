@@ -1,0 +1,25 @@
+{
+  "name": "codex-doctor",
+  "version": "0.1.0",
+  "description": "Diagnose why Codex is thinking: network, API, tool execution, approval waiting, context compaction, or sandbox blocking.",
+  "author": {
+    "name": "Xinyang Zhang"
+  },
+  "license": "MIT",
+  "keywords": ["codex", "observability", "diagnostics", "developer-tools"],
+  "hooks": "./hooks/hooks.json",
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Codex Doctor",
+    "shortDescription": "Know why Codex is thinking.",
+    "longDescription": "Codex Doctor records lifecycle events and helps diagnose whether Codex is waiting on network, API/model response, approval, local tools, context compaction, or sandbox policy.",
+    "developerName": "Xinyang Zhang",
+    "category": "Productivity",
+    "capabilities": ["Read"],
+    "brandColor": "#10A37F",
+    "defaultPrompt": [
+      "Use Codex Doctor to diagnose why this Codex session is slow.",
+      "Use Codex Doctor to summarize the last Codex session bottleneck."
+    ]
+  }
+}

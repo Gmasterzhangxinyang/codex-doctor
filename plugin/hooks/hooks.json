@@ -1,0 +1,91 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex_doctor_hook.py",
+            "timeout": 5,
+            "statusMessage": "Codex Doctor: prompt submitted"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex_doctor_hook.py",
+            "timeout": 5,
+            "statusMessage": "Codex Doctor: tool starting"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex_doctor_hook.py",
+            "timeout": 5,
+            "statusMessage": "Codex Doctor: approval requested"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex_doctor_hook.py",
+            "timeout": 5,
+            "statusMessage": "Codex Doctor: tool finished"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex_doctor_hook.py",
+            "timeout": 5,
+            "statusMessage": "Codex Doctor: compacting"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex_doctor_hook.py",
+            "timeout": 5,
+            "statusMessage": "Codex Doctor: compact finished"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${PLUGIN_ROOT}/hooks/codex_doctor_hook.py",
+            "timeout": 5,
+            "statusMessage": "Codex Doctor: stopped"
+          }
+        ]
+      }
+    ]
+  }
+}
