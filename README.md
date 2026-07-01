@@ -40,7 +40,9 @@ Check the Codex UI for a permission prompt.
 
 ## Features
 
-- Real-time dashboard with `codex-doctor watch`.
+- One-shot Codex App diagnosis with `codex-doctor diagnose`.
+- Lightweight monitor with optional macOS notifications via `codex-doctor monitor --notify`.
+- Debug dashboard with `codex-doctor watch`.
 - PTY wrapper mode with `codex-doctor run`.
 - Hook recorder for Codex lifecycle events.
 - Best-effort Codex App fallback that reads local rollout event metadata when hooks are not emitted.
@@ -69,7 +71,19 @@ python -m pip install -e ".[dev]"
 
 ## Quick Start
 
-Run Codex through the wrapper:
+For Codex App users, start with a one-shot diagnosis:
+
+```bash
+codex-doctor diagnose
+```
+
+Keep a lightweight monitor running and notify when Codex looks stuck:
+
+```bash
+codex-doctor monitor --notify
+```
+
+Run Codex through the wrapper when you want the most complete local evidence:
 
 ```bash
 codex-doctor run
@@ -167,6 +181,8 @@ See [Privacy](docs/privacy.md) and [Security Policy](SECURITY.md).
 
 ```bash
 codex-doctor install
+codex-doctor diagnose
+codex-doctor monitor --notify
 codex-doctor run
 codex-doctor watch
 codex-doctor report --last
@@ -176,7 +192,7 @@ codex-doctor uninstall
 
 ## Optional Codex Plugin
 
-The optional plugin package lives in [`plugin/`](plugin/). It provides lifecycle hooks and a `diagnose-codex` skill. The CLI remains responsible for the dashboard, reports, and richer diagnostics.
+The optional plugin package lives in [`plugin/`](plugin/). It provides lifecycle hooks and a `diagnose-codex` skill. The CLI remains responsible for `diagnose`, `monitor`, reports, and richer diagnostics.
 
 See [Plugin Install](docs/plugin-install.md).
 

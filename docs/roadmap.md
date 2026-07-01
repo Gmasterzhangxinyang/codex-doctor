@@ -11,6 +11,8 @@
 - Rich watch dashboard.
 - Markdown reports.
 - Optional Codex plugin package.
+- Codex App fallback diagnosis from local rollout metadata.
+- One-shot `diagnose` and lightweight `monitor --notify`.
 
 ## v0.2
 

@@ -19,3 +19,9 @@
 
 - Keep `codex-doctor watch` running when the local Codex Doctor SQLite database is temporarily unavailable.
 - Continue showing Codex App fallback activity when hook/wrapper storage cannot be opened.
+
+## 0.2.0
+
+- Add `codex-doctor diagnose` as the primary Codex App-friendly one-shot diagnosis command.
+- Add `codex-doctor monitor --notify` for lightweight polling and macOS notifications.
+- Combine Codex App rollout metadata with OpenAI network probes to distinguish stale App activity from network/API waiting.

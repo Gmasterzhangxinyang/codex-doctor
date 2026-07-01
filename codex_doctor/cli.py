@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
 
 from . import __version__
 from .codex_locator import find_codex_executable
+from .current_status import CurrentStatus, diagnose_current
 from .install import hooks_installed, install_hooks, uninstall_hooks
 from .network_probe import run_probe
+from .notifications import notify
 from .report import generate_report, write_report
 from .runner import run_codex
 from .storage import Storage
@@ -85,6 +90,53 @@ def watch(
     watch_dashboard(session=session, refresh_seconds=refresh)
 
 
+@app.command(name="diagnose")
+def diagnose_app(
+    network: Annotated[
+        bool, typer.Option("--network/--no-network", help="Run OpenAI network probe.")
+    ] = True,
+    stale_seconds: Annotated[
+        int, typer.Option("--stale-seconds", help="Seconds without App events before treating as stale.")
+    ] = 45,
+) -> None:
+    status = diagnose_current(
+        include_network=network, stale_seconds=stale_seconds, probe_when_active=True
+    )
+    console.print(render_status(status))
+
+
+@app.command(name="monitor")
+def monitor_app(
+    notify_user: Annotated[
+        bool, typer.Option("--notify", help="Send macOS notification when Codex looks stuck.")
+    ] = False,
+    interval: Annotated[float, typer.Option("--interval", help="Polling interval in seconds.")] = 5.0,
+    stale_seconds: Annotated[
+        int, typer.Option("--stale-seconds", help="Seconds without App events before treating as stale.")
+    ] = 45,
+    network: Annotated[
+        bool,
+        typer.Option(
+            "--network/--no-network",
+            help="Run OpenAI network probe when activity looks stale or uncertain.",
+        ),
+    ] = True,
+) -> None:
+    last_notification_key = None
+    try:
+        while True:
+            status = diagnose_current(include_network=network, stale_seconds=stale_seconds)
+            console.clear()
+            console.print(render_status(status))
+            key = (status.session_id, status.diagnosis.state, status.diagnosis.title)
+            if notify_user and _should_notify(status) and key != last_notification_key:
+                notify("Codex Doctor", f"{status.diagnosis.state}: {status.diagnosis.title}")
+                last_notification_key = key
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        console.print("Stopped.")
+
+
 @app.command()
 def report(
     last: Annotated[bool, typer.Option("--last", help="Use latest session.")] = False,
@@ -120,3 +172,39 @@ def doctor() -> None:
         console.print("\nResult: Network is reachable. If Codex is slow, basic connectivity is unlikely.")
     else:
         console.print("\nResult: Network or proxy may be blocking Codex.")
+
+
+def render_status(status: CurrentStatus) -> Panel:
+    table = Table.grid(expand=True)
+    table.add_column(ratio=1)
+    table.add_row(f"[bold]Session[/bold]: {status.session_id}")
+    table.add_row(f"[bold]Source[/bold]: {status.source}")
+    table.add_row(f"[bold]Status[/bold]: {status.diagnosis.state}")
+    table.add_row(f"[bold]Confidence[/bold]: {status.diagnosis.confidence.value}")
+    table.add_row("")
+    table.add_row(f"[bold]Diagnosis[/bold]: {status.diagnosis.title}")
+    table.add_row(status.diagnosis.explanation)
+    if status.network_probe:
+        probe = status.network_probe
+        network = "OK" if probe.ok else f"FAILED ({probe.error_type})"
+        total = f"{probe.total_ms / 1000:.2f}s" if probe.total_ms else "n/a"
+        table.add_row("")
+        table.add_row(f"[bold]Network[/bold]: {network} HTTP={probe.http_code or 'n/a'} total={total}")
+    if status.app_events:
+        table.add_row("")
+        table.add_row("[bold]Recent App events[/bold]:")
+        for event in status.app_events[-8:]:
+            table.add_row(f"{event.ts.strftime('%H:%M:%S')} {event.label}")
+    if status.storage_error:
+        table.add_row("")
+        table.add_row(f"[bold red]Storage[/bold red]: {status.storage_error}")
+    return Panel(table, title="Codex Doctor Diagnose")
+
+
+def _should_notify(status: CurrentStatus) -> bool:
+    return status.diagnosis.state in {
+        "NETWORK_SUSPECTED",
+        "API_OR_MODEL_WAITING",
+        "SANDBOX_OR_PERMISSION_BLOCKED",
+        "APPROVAL_WAITING",
+    }
