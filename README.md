@@ -9,7 +9,7 @@
 
 Know why Codex is thinking.
 
-Codex Doctor is a local-first diagnostic CLI for Codex. It explains whether a slow or stuck Codex session is waiting on network, API/model latency, approval, local tools, context compaction, sandbox policy, or a long-running command.
+Codex Doctor is a local-first stuck notifier for Codex App. When Codex appears to be thinking for too long, it sends a macOS notification with the likely reason: network, API/model latency, approval, local tools, context compaction, sandbox policy, or a long-running command.
 
 It does not read or reveal hidden model reasoning. It diagnoses observable runtime state only.
 
@@ -40,19 +40,11 @@ Check the Codex UI for a permission prompt.
 
 ## Features
 
-- One-shot Codex App diagnosis with `codex-doctor diagnose`.
-- Lightweight monitor with optional macOS notifications via `codex-doctor monitor --notify`.
-- Debug dashboard with `codex-doctor watch`.
-- PTY wrapper mode with `codex-doctor run`.
-- Hook recorder for Codex lifecycle events.
-- Best-effort Codex App fallback that reads local rollout event metadata when hooks are not emitted.
-- curl-first OpenAI network probe with Python fallback.
-- Process-tree sampling with CPU, memory, and child process visibility.
-- SQLite plus JSONL local storage.
-- Markdown session reports.
-- Optional Codex plugin package.
-- Privacy-first redaction for prompt/tool data.
-- Confidence labels for every diagnosis.
+- Focused stuck feedback with `codex-doctor notify`.
+- Best-effort Codex App activity detection from local session metadata.
+- OpenAI network probe to separate connectivity issues from API/model waiting.
+- macOS notifications when a stuck reason is detected.
+- Local-first privacy model: no hidden reasoning, prompt text, or API keys are collected.
 
 ## Install
 
@@ -71,74 +63,29 @@ python -m pip install -e ".[dev]"
 
 ## Quick Start
 
-For Codex App users, start with a one-shot diagnosis:
+For Codex App users, run the small stuck notifier:
+
+```bash
+codex-doctor notify
+```
+
+Make it report faster:
+
+```bash
+codex-doctor notify --after 20
+```
+
+That is the main workflow: keep it open while using Codex App. It sends a macOS
+notification only when Codex Doctor thinks Codex is stuck and can explain why.
+
+For a one-shot debug check:
 
 ```bash
 codex-doctor diagnose
 ```
 
-Keep a lightweight monitor running and notify when Codex looks stuck:
-
-```bash
-codex-doctor monitor --notify
-```
-
-Notify on every status change, including normal App activity:
-
-```bash
-codex-doctor monitor --notify --notify-all
-```
-
-Run Codex through the wrapper when you want the most complete local evidence:
-
-```bash
-codex-doctor run
-```
-
-Pass Codex arguments after `--`:
-
-```bash
-codex-doctor run -- --model gpt-5.5
-codex-doctor run -- exec "fix this bug"
-```
-
-Or keep using Codex directly and watch recorded hooks:
-
-```bash
-codex
-codex-doctor watch
-```
-
-Generate a report:
-
-```bash
-codex-doctor report --last
-codex-doctor report --last --output report.md
-```
-
-Check the local environment and OpenAI connectivity:
-
-```bash
-codex-doctor doctor
-```
-
-## Dashboard Preview
-
-```text
-┌ Codex Doctor ─────────────────────────────────────────┐
-│ Session: 20260701-143812                              │
-│ Status: TOOL_RUNNING                                  │
-│ Confidence: HIGH                                      │
-│                                                        │
-│ Diagnosis: Codex is waiting for a local tool to finish │
-│ Network: OK HTTP=401                                  │
-│ Process: CPU=91.0 MEM=1228.4MB children=3             │
-│                                                        │
-│ Last events:                                           │
-│ 14:38:12 UserPromptSubmit                              │
-│ 14:38:44 PreToolUse Bash                               │
-└────────────────────────────────────────────────────────┘
-```
+Advanced debug commands such as `diagnose`, `monitor`, `watch`, `run`, and `report`
+are kept for maintainers, but the product surface is `codex-doctor notify`.
 
 ## Diagnosis States
 
@@ -157,15 +104,17 @@ Every diagnosis includes confidence: `HIGH`, `MEDIUM`, or `LOW`.
 
 ## How It Works
 
-Codex Doctor combines four local evidence sources:
+Codex Doctor combines local evidence sources:
 
 1. Codex lifecycle hooks.
 2. PTY wrapper terminal activity.
 3. Local process-tree samples.
 4. OpenAI network probes.
 
-Those signals feed a small state machine that emits a current diagnosis and a reportable timeline.
-When Codex App does not emit hooks for a visible App session, `watch` can fall back to the latest local rollout file and display only safe event metadata such as `reasoning`, `function_call`, and `function_call_output`.
+Those signals feed a small state machine that emits stuck feedback.
+When Codex App does not emit hooks for a visible App session, Codex Doctor falls
+back to the latest local session file and reads only safe event metadata such as
+`reasoning`, `function_call`, and `function_call_output`.
 
 See [Architecture](docs/architecture.md) and [Event Model](docs/events.md).
 
@@ -187,19 +136,15 @@ See [Privacy](docs/privacy.md) and [Security Policy](SECURITY.md).
 
 ```bash
 codex-doctor install
+codex-doctor notify
+codex-doctor notify --after 20
 codex-doctor diagnose
-codex-doctor monitor --notify
-codex-doctor monitor --notify --notify-all
-codex-doctor run
-codex-doctor watch
-codex-doctor report --last
-codex-doctor doctor
 codex-doctor uninstall
 ```
 
 ## Optional Codex Plugin
 
-The optional plugin package lives in [`plugin/`](plugin/). It provides lifecycle hooks and a `diagnose-codex` skill. The CLI remains responsible for `diagnose`, `monitor`, reports, and richer diagnostics.
+The optional plugin package lives in [`plugin/`](plugin/). It provides lifecycle hooks and a `diagnose-codex` skill. The notifier remains the main user-facing workflow.
 
 See [Plugin Install](docs/plugin-install.md).
 

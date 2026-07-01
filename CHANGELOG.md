@@ -20,6 +20,16 @@
 - Keep `codex-doctor watch` running when the local Codex Doctor SQLite database is temporarily unavailable.
 - Continue showing Codex App fallback activity when hook/wrapper storage cannot be opened.
 
+## 0.3.0
+
+- Add `codex-doctor notify` as the focused Codex App stuck-feedback command.
+- Reposition dashboard and wrapper commands as advanced/debug workflows.
+
+## 0.2.2
+
+- Make `codex-doctor monitor --notify` send stuck feedback when active states persist too long.
+- Add `--stuck-after` to tune the stuck feedback threshold.
+
 ## 0.2.1
 
 - Add `codex-doctor monitor --notify --notify-all` for users who want notifications on normal Codex App activity changes, not only stuck/error states.

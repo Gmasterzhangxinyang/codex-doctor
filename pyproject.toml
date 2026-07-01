@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-doctor"
-version = "0.2.1"
+version = "0.3.0"
 description = "Diagnose why Codex is thinking: network, API, tools, approval, sandbox, or local commands."
 readme = "README.md"
 requires-python = ">=3.11"

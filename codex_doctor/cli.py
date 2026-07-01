@@ -52,8 +52,8 @@ def install(
     console.print("[bold green]Codex Doctor installed.[/bold green]")
     console.print(f"Hooks written to: {path}")
     console.print("\nNext:")
-    console.print("1. Start Codex: [bold]codex-doctor run[/bold]")
-    console.print("2. Or keep using Codex directly and watch: [bold]codex-doctor watch[/bold]")
+    console.print("1. Start stuck feedback: [bold]codex-doctor notify[/bold]")
+    console.print("2. Make it faster: [bold]codex-doctor notify --after 20[/bold]")
     _ = user
 
 
@@ -69,7 +69,10 @@ def uninstall(
         console.print("Local data purged.")
 
 
-@app.command(context_settings={"allow_extra_args": True, "ignore_unknown_options": True})
+@app.command(
+    context_settings={"allow_extra_args": True, "ignore_unknown_options": True},
+    hidden=True,
+)
 def run(ctx: typer.Context) -> None:
     args = list(ctx.args)
     if args and args[0] == "--":
@@ -82,7 +85,7 @@ def run(ctx: typer.Context) -> None:
     raise typer.Exit(code)
 
 
-@app.command()
+@app.command(hidden=True)
 def watch(
     session: Annotated[str, typer.Option("--session", help="Session id or latest.")] = "latest",
     refresh: Annotated[float, typer.Option("--refresh", help="Refresh seconds.")] = 1.0,
@@ -105,7 +108,7 @@ def diagnose_app(
     console.print(render_status(status))
 
 
-@app.command(name="monitor")
+@app.command(name="monitor", hidden=True)
 def monitor_app(
     notify_user: Annotated[
         bool, typer.Option("--notify", help="Send macOS notification when Codex looks stuck.")
@@ -118,6 +121,13 @@ def monitor_app(
         ),
     ] = False,
     interval: Annotated[float, typer.Option("--interval", help="Polling interval in seconds.")] = 5.0,
+    stuck_after: Annotated[
+        float,
+        typer.Option(
+            "--stuck-after",
+            help="Seconds a non-idle state can persist before sending stuck feedback.",
+        ),
+    ] = 45.0,
     stale_seconds: Annotated[
         int, typer.Option("--stale-seconds", help="Seconds without App events before treating as stale.")
     ] = 45,
@@ -130,22 +140,98 @@ def monitor_app(
     ] = True,
 ) -> None:
     last_notification_key = None
+    current_state_key = None
+    state_started_at = time.monotonic()
+    stuck_notification_key = None
     try:
         while True:
+            now = time.monotonic()
             status = diagnose_current(include_network=network, stale_seconds=stale_seconds)
+            state_key = (status.session_id, status.diagnosis.state)
+            if state_key != current_state_key:
+                current_state_key = state_key
+                state_started_at = now
+                stuck_notification_key = None
+            state_age = now - state_started_at
             console.clear()
             console.print(render_status(status))
             key = (status.session_id, status.diagnosis.state, status.diagnosis.title)
             should_notify = notify_user and _should_notify(status, notify_all=notify_all)
+            should_notify_stuck = (
+                notify_user
+                and not notify_all
+                and _should_notify_stuck(status)
+                and state_age >= stuck_after
+                and key != stuck_notification_key
+            )
             if should_notify and key != last_notification_key:
-                notify("Codex Doctor", f"{status.diagnosis.state}: {status.diagnosis.title}")
+                notify("Codex Doctor", _notification_message(status))
                 last_notification_key = key
+            elif should_notify_stuck:
+                notify("Codex Doctor", _notification_message(status, duration_seconds=state_age))
+                stuck_notification_key = key
             time.sleep(interval)
     except KeyboardInterrupt:
         console.print("Stopped.")
 
 
-@app.command()
+@app.command(name="notify")
+def notify_when_stuck(
+    after: Annotated[
+        float,
+        typer.Option("--after", help="Seconds before Codex Doctor reports a stuck active state."),
+    ] = 45.0,
+    interval: Annotated[float, typer.Option("--interval", help="Polling interval in seconds.")] = 5.0,
+    network: Annotated[
+        bool,
+        typer.Option(
+            "--network/--no-network",
+            help="Run OpenAI network probe when activity looks stale or uncertain.",
+        ),
+    ] = True,
+) -> None:
+    console.print(
+        f"Codex Doctor is watching for stuck Codex App activity. Feedback after {after:.0f}s."
+    )
+    console.print("Press Ctrl+C to stop.")
+    last_notification_key = None
+    current_state_key = None
+    state_started_at = time.monotonic()
+    stuck_notification_key = None
+    try:
+        while True:
+            now = time.monotonic()
+            status = diagnose_current(
+                include_network=network,
+                stale_seconds=max(1, int(after)),
+            )
+            state_key = (status.session_id, status.diagnosis.state)
+            if state_key != current_state_key:
+                current_state_key = state_key
+                state_started_at = now
+                stuck_notification_key = None
+            state_age = now - state_started_at
+            key = (status.session_id, status.diagnosis.state, status.diagnosis.title)
+            if _should_notify(status) and key != last_notification_key:
+                message = _notification_message(status)
+                notify("Codex Doctor", message)
+                console.print(message)
+                last_notification_key = key
+            elif (
+                _should_notify_stuck(status)
+                and state_age >= after
+                and key != stuck_notification_key
+            ):
+                message = _notification_message(status, duration_seconds=state_age)
+                notify("Codex Doctor", message)
+                console.print(message)
+                stuck_notification_key = key
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        console.print("Stopped.")
+
+
+@app.command(hidden=True)
 def report(
     last: Annotated[bool, typer.Option("--last", help="Use latest session.")] = False,
     session: Annotated[str | None, typer.Option("--session", help="Specific session id.")] = None,
@@ -158,7 +244,7 @@ def report(
         console.print(generate_report(session_id=session, last=last or session is None))
 
 
-@app.command()
+@app.command(hidden=True)
 def doctor() -> None:
     storage = Storage()
     probe = run_probe(timeout=10)
@@ -218,3 +304,20 @@ def _should_notify(status: CurrentStatus, *, notify_all: bool = False) -> bool:
         "SANDBOX_OR_PERMISSION_BLOCKED",
         "APPROVAL_WAITING",
     }
+
+
+def _should_notify_stuck(status: CurrentStatus) -> bool:
+    return status.diagnosis.state in {
+        "MODEL_STREAMING",
+        "TOOL_RUNNING",
+        "CODEX_THINKING_NO_TOOL",
+        "PROMPT_SUBMITTED",
+        "CONTEXT_COMPACTING",
+    }
+
+
+def _notification_message(status: CurrentStatus, *, duration_seconds: float | None = None) -> str:
+    state = status.diagnosis.state
+    if duration_seconds is not None:
+        state = f"{state} for {duration_seconds:.0f}s"
+    return f"{state}: {status.diagnosis.title}"

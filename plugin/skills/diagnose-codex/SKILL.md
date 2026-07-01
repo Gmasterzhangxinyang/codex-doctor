@@ -4,11 +4,10 @@ Use this skill when the user asks why Codex is thinking, slow, stuck, waiting, o
 
 ## Workflow
 
-1. Prefer `codex-doctor diagnose` for a one-shot current status check.
-2. Use `codex-doctor monitor --notify` when the user wants Codex App-friendly background monitoring.
-3. Use `codex-doctor doctor` if they need an environment/network check.
-4. Use `codex-doctor report --last` for a Markdown summary of the latest recorded session.
-5. Interpret the state without claiming access to hidden model reasoning.
+1. Prefer `codex-doctor notify` for Codex App stuck feedback.
+2. Use `codex-doctor notify --after 20` when the user wants faster feedback.
+3. Use `codex-doctor diagnose` only for a one-shot debug check.
+4. Interpret the state without claiming access to hidden model reasoning.
 
 ## Interpretation
 
@@ -22,4 +21,4 @@ Use this skill when the user asks why Codex is thinking, slow, stuck, waiting, o
 
 ## Privacy
 
-Do not ask for API keys, complete prompts, hidden reasoning, or full command output. Prefer local report summaries.
+Do not ask for API keys, complete prompts, hidden reasoning, or full command output.
