@@ -3,21 +3,24 @@ from __future__ import annotations
 import os
 import pty
 import select
-import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
 
+from .codex_locator import find_codex_executable
 from .process_monitor import sample_process_tree
 from .schemas import Event, Session
 from .storage import Storage
 
 
 def run_codex(args: list[str]) -> int:
-    codex = shutil.which("codex")
+    codex = find_codex_executable()
     if not codex:
-        raise RuntimeError("Codex CLI was not found on PATH.")
+        raise RuntimeError(
+            "Codex executable was not found. Install Codex CLI, add it to PATH, "
+            "or set CODEX_DOCTOR_CODEX_PATH=/path/to/codex."
+        )
 
     storage = Storage()
     session = storage.create_session(Session(cwd=str(Path.cwd()), codex_args=" ".join(args)))

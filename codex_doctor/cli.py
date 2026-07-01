@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import shutil
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -9,6 +8,7 @@ import typer
 from rich.console import Console
 
 from . import __version__
+from .codex_locator import find_codex_executable
 from .install import hooks_installed, install_hooks, uninstall_hooks
 from .network_probe import run_probe
 from .report import generate_report, write_report
@@ -103,7 +103,7 @@ def doctor() -> None:
     storage = Storage()
     probe = run_probe(timeout=10)
     storage.insert_probe(probe)
-    codex = shutil.which("codex")
+    codex = find_codex_executable()
     console.print("[bold]Codex Doctor Environment Check[/bold]\n")
     console.print(f"Codex CLI: {'found at ' + codex if codex else 'not found'}")
     console.print(f"Python: {sys.version.split()[0]}")
