@@ -46,7 +46,16 @@ def install(
     user: Annotated[bool, typer.Option("--user", help="Install user hooks.")] = True,
     project: Annotated[bool, typer.Option("--project", help="Install project hooks.")] = False,
     force: Annotated[bool, typer.Option("--force", help="Do not create a backup.")] = False,
+    notification_check: Annotated[
+        bool,
+        typer.Option(
+            "--notification-check/--skip-notification-check",
+            help="Verify macOS notifications before completing install.",
+        ),
+    ] = True,
 ) -> None:
+    if notification_check:
+        _check_notifications_or_exit()
     scope = "project" if project else "user"
     path = install_hooks(scope=scope, force=force)
     console.print("[bold green]Codex Doctor installed.[/bold green]")
@@ -168,7 +177,9 @@ def monitor_app(
                 _send_feedback_notification(_notification_message(status))
                 last_notification_key = key
             elif should_notify_stuck:
-                _send_feedback_notification(_notification_message(status, duration_seconds=state_age))
+                _send_feedback_notification(
+                    _notification_message(status, duration_seconds=state_age)
+                )
                 stuck_notification_key = key
             time.sleep(interval)
     except KeyboardInterrupt:
@@ -339,3 +350,25 @@ def _send_feedback_notification(message: str) -> bool:
         console.print("Codex Doctor will still print stuck feedback in this terminal.")
         return False
     return True
+
+
+def _check_notifications_or_exit() -> None:
+    console.print("Checking macOS notifications...")
+    result = send_notification(
+        "Codex Doctor",
+        "Notification self-test passed. Codex Doctor can alert you when Codex is stuck.",
+    )
+    if result.ok:
+        console.print("[green]Notification self-test passed.[/green]")
+        return
+    console.print("[red]Notification self-test failed.[/red]")
+    console.print(str(result.error or "unknown error"))
+    console.print("\nInstall was not completed because notifications are the core feature.")
+    console.print(
+        "Enable notifications for your terminal app, disable Focus if needed, then run "
+        "[bold]codex-doctor install[/bold] again."
+    )
+    console.print(
+        "For headless/CI use only: [bold]codex-doctor install --skip-notification-check[/bold]"
+    )
+    raise typer.Exit(1)

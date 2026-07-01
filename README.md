@@ -53,6 +53,9 @@ pipx install codex-doctor
 codex-doctor install
 ```
 
+`codex-doctor install` sends a test macOS notification. If the popup channel is
+not working, install fails instead of pretending Codex Doctor is ready.
+
 For local development:
 
 ```bash

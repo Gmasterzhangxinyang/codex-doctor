@@ -1,5 +1,15 @@
-from codex_doctor.cli import _notification_message, _should_notify, _should_notify_stuck
+import pytest
+import typer
+
+from codex_doctor import cli
+from codex_doctor.cli import (
+    _check_notifications_or_exit,
+    _notification_message,
+    _should_notify,
+    _should_notify_stuck,
+)
 from codex_doctor.current_status import CurrentStatus
+from codex_doctor.notifications import NotificationResult
 from codex_doctor.schemas import Confidence, Diagnosis
 from codex_doctor.state_machine import CodexState
 
@@ -35,3 +45,14 @@ def test_should_notify_stuck_includes_long_running_active_states():
 def test_notification_message_can_include_duration():
     message = _notification_message(_status(CodexState.TOOL_RUNNING), duration_seconds=61)
     assert message.startswith("TOOL_RUNNING for 61s:")
+
+
+def test_check_notifications_exits_on_failure(monkeypatch):
+    monkeypatch.setattr(
+        cli,
+        "send_notification",
+        lambda title, message: NotificationResult(ok=False, error="failed"),
+    )
+
+    with pytest.raises(typer.Exit):
+        _check_notifications_or_exit()

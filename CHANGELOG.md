@@ -20,6 +20,11 @@
 - Keep `codex-doctor watch` running when the local Codex Doctor SQLite database is temporarily unavailable.
 - Continue showing Codex App fallback activity when hook/wrapper storage cannot be opened.
 
+## 0.3.2
+
+- Make `codex-doctor install` verify macOS notification delivery by default.
+- Fail installation when notifications are unavailable, with an explicit `--skip-notification-check` escape hatch for headless environments.
+
 ## 0.3.1
 
 - Add `codex-doctor notify --test` to verify whether macOS notifications are actually available.

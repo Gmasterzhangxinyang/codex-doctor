@@ -17,7 +17,10 @@ def notify(title: str, message: str) -> bool:
 
 def send_notification(title: str, message: str) -> NotificationResult:
     if platform.system() != "Darwin":
-        return NotificationResult(ok=False, error="macOS notifications are only supported on Darwin.")
+        return NotificationResult(
+            ok=False,
+            error="macOS notifications are only supported on Darwin.",
+        )
     script = (
         f"display notification {_applescript_string(message)} "
         f"with title {_applescript_string(title)}"
