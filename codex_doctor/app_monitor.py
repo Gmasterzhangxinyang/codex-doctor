@@ -73,9 +73,10 @@ def diagnose_app_activity(activity: AppActivity, now: datetime | None = None) ->
     now = now or datetime.now(timezone.utc)
     latest = activity.events[-1]
     age = max(0.0, (now - latest.ts).total_seconds())
-    open_call = _open_function_call(activity.events)
+    open_calls = _open_function_calls(activity.events)
 
-    if open_call:
+    if open_calls:
+        open_call = open_calls[-1]
         return Diagnosis(
             session_id=activity.session_id,
             state=CodexState.TOOL_RUNNING.value,
@@ -85,7 +86,12 @@ def diagnose_app_activity(activity: AppActivity, now: datetime | None = None) ->
                 "Codex App's local rollout log has a function_call without a later "
                 "function_call_output. This is best-effort App monitoring."
             ),
-            evidence={"source": "codex-app-rollout", "age_seconds": age, "tool": open_call.name},
+            evidence={
+                "source": "codex-app-rollout",
+                "age_seconds": age,
+                "tool": open_call.name,
+                "open_tool_calls": len(open_calls),
+            },
         )
 
     if latest.payload_type in {"reasoning", "web_search_call", "web_search_end"} and age < 120:
@@ -176,7 +182,7 @@ def _summarize_row(row: dict[str, Any]) -> AppEventSummary | None:
     )
 
 
-def _open_function_call(events: list[AppEventSummary]) -> AppEventSummary | None:
+def _open_function_calls(events: list[AppEventSummary]) -> list[AppEventSummary]:
     open_calls: dict[str, AppEventSummary] = {}
     fallback: AppEventSummary | None = None
     for event in events:
@@ -184,12 +190,23 @@ def _open_function_call(events: list[AppEventSummary]) -> AppEventSummary | None
             fallback = event
             if event.call_id:
                 open_calls[event.call_id] = event
-        elif event.payload_type == "function_call_output" and event.call_id:
-            open_calls.pop(event.call_id, None)
+            continue
+
+        if event.payload_type == "function_call_output":
+            if event.call_id:
+                open_calls.pop(event.call_id, None)
+            else:
+                open_calls.clear()
             fallback = None
+            continue
+
+        if event.payload_type in {"agent_message", "message"}:
+            open_calls.clear()
+            fallback = None
+
     if open_calls:
-        return list(open_calls.values())[-1]
-    return fallback
+        return list(open_calls.values())
+    return [fallback] if fallback else []
 
 
 def _tail_lines(path: Path) -> list[str]:

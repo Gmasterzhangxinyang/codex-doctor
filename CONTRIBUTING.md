@@ -16,15 +16,16 @@ Useful commands:
 
 ```bash
 codex-doctor doctor
-codex-doctor report --last
-codex-doctor run -- --help
+codex-doctor --no-network
+codex-doctor report --no-network
+python -m codex_doctor --no-network
 ```
 
 ## Pull Requests
 
 Good PRs usually include:
 
-- A clear user-facing diagnostic improvement.
+- A clear user-facing health-check improvement.
 - Tests for state-machine, redaction, storage, or reporting changes.
 - No new cloud dependency.
 - No logging of secrets, complete prompts, or complete tool output.
@@ -33,6 +34,6 @@ Good PRs usually include:
 
 - Local-first by default.
 - Fast hooks that never break Codex.
-- Confidence labels for every diagnosis.
+- Confidence labels for every visible-state summary.
 - Observable evidence over speculation.
 - Simple code paths over clever abstractions.

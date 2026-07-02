@@ -1,6 +1,6 @@
 # Event Model
 
-Codex Doctor normalizes hook and wrapper observations into a small event schema.
+Codex Doctor stores a small redacted event schema for local health checks.
 
 ```text
 Event
@@ -21,9 +21,11 @@ Event
   raw_redacted
 ```
 
-The schema is intentionally conservative. Tool input is represented as a hash and short redacted snippet. Full prompt content and full command output are not stored by default.
+The schema is intentionally conservative. Tool input is stored as a hash and a
+short redacted snippet. Full prompts and full command output are not stored by
+default.
 
-## Primary Hook Events
+## Hook Events
 
 - `SessionStart`
 - `UserPromptSubmit`
@@ -34,10 +36,8 @@ The schema is intentionally conservative. Tool input is represented as a hash an
 - `PostCompact`
 - `Stop`
 
-## Wrapper Events
+## App Metadata
 
-- `TerminalOutput`
-- `SessionStart`
-- `Stop`
-
-Wrapper events help distinguish silent model/API waiting from active local terminal work.
+When hooks are unavailable, Codex Doctor reads safe event metadata from local
+Codex App session files, such as event type, timestamp, tool name, status, and
+call id. It does not read hidden reasoning as content.

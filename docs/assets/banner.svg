@@ -1,22 +1,36 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="Codex Doctor banner">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-label="Codex Doctor session health banner">
   <defs>
     <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0" stop-color="#101820"/>
-      <stop offset="0.55" stop-color="#122b2a"/>
-      <stop offset="1" stop-color="#0f3d35"/>
+      <stop offset="0" stop-color="#071015"/>
+      <stop offset="0.48" stop-color="#0d2327"/>
+      <stop offset="1" stop-color="#12352f"/>
+    </linearGradient>
+    <linearGradient id="line" x1="0" x2="1">
+      <stop offset="0" stop-color="#6ee7c8"/>
+      <stop offset="1" stop-color="#8ab4ff"/>
     </linearGradient>
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.35"/>
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#000000" flood-opacity="0.38"/>
     </filter>
   </defs>
+
   <rect width="1200" height="420" fill="url(#bg)"/>
-  <rect x="70" y="68" width="1060" height="284" rx="22" fill="#0b1117" opacity="0.88" filter="url(#shadow)"/>
-  <rect x="104" y="104" width="430" height="214" rx="14" fill="#101a21" stroke="#244a47"/>
-  <text x="132" y="150" fill="#6ee7c8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="26">$ codex-doctor watch</text>
-  <text x="132" y="195" fill="#e5f7f2" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="22">Status: TOOL_RUNNING</text>
-  <text x="132" y="235" fill="#b8d8d2" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">Confidence: HIGH</text>
-  <text x="132" y="275" fill="#89aaa4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="20">Network: reachable, 401 in 0.44s</text>
-  <text x="590" y="164" fill="#ffffff" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="58" font-weight="700">Codex Doctor</text>
-  <text x="594" y="214" fill="#b8d8d2" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="28">Know why Codex is thinking.</text>
-  <text x="594" y="265" fill="#7ddfc8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="22">Local-first diagnostics for network, API, tools, approvals, context, and sandbox waits.</text>
+  <path d="M0 340 C180 280 320 390 520 328 C730 262 860 302 1200 218 L1200 420 L0 420 Z" fill="#0a171d" opacity="0.72"/>
+  <rect x="64" y="54" width="1072" height="312" rx="28" fill="#0b1218" opacity="0.92" filter="url(#shadow)"/>
+
+  <rect x="96" y="88" width="500" height="244" rx="14" fill="#0f1a21" stroke="#284741"/>
+  <circle cx="124" cy="116" r="7" fill="#ff6b6b"/>
+  <circle cx="148" cy="116" r="7" fill="#ffd166"/>
+  <circle cx="172" cy="116" r="7" fill="#5ee6a8"/>
+  <text x="118" y="158" fill="#6ee7c8" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="24">$ codex-doctor</text>
+  <text x="118" y="198" fill="#edf7f4" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="21">Visible state: TOOL_RUNNING</text>
+  <text x="118" y="232" fill="#b8d8d2" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="19">Evidence: 2 open tool calls</text>
+  <text x="118" y="265" fill="#b8d8d2" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="19">Latest event: 8s ago</text>
+  <text x="118" y="298" fill="#8ab4ff" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="19">Network: reachable</text>
+
+  <text x="646" y="144" fill="#ffffff" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="56" font-weight="750">Codex Doctor</text>
+  <text x="650" y="192" fill="#d8eee8" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="28">Session health, not mind reading.</text>
+  <rect x="650" y="224" width="390" height="4" rx="2" fill="url(#line)"/>
+  <text x="650" y="270" fill="#9fc7c0" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="21">Local-first evidence for tools, approvals,</text>
+  <text x="650" y="302" fill="#9fc7c0" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="21">network probes, sandbox errors, and event age.</text>
 </svg>

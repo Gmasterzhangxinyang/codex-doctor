@@ -1,103 +1,78 @@
 from pathlib import Path
 
-import pytest
-import typer
+from typer.testing import CliRunner
 
 from codex_doctor import cli
-from codex_doctor.cli import (
-    _check_notifications_or_exit,
-    _notification_message,
-    _normalize_after,
-    _resolve_notify_settings,
-    _should_notify,
-    _should_notify_stuck,
-)
+from codex_doctor.cli import _normalize_lang
 from codex_doctor.current_status import CurrentStatus
-from codex_doctor.notifications import NotificationResult
 from codex_doctor.schemas import Confidence, Diagnosis
-from codex_doctor.state_machine import CodexState
 
 
-def _status(state: CodexState, project_path: Path | None = None) -> CurrentStatus:
+runner = CliRunner()
+
+
+def _status() -> CurrentStatus:
     return CurrentStatus(
         diagnosis=Diagnosis(
-            state=state.value,
+            state="API_OR_MODEL_WAITING",
             confidence=Confidence.MEDIUM,
-            title="test",
-            explanation="test",
+            title="Waiting",
+            explanation="Network is reachable, but no recent Codex activity was observed.",
         ),
         source="test",
         session_id="s1",
-        project_path=project_path,
     )
 
 
-def test_should_notify_is_quiet_for_normal_activity_by_default():
-    assert not _should_notify(_status(CodexState.TOOL_RUNNING))
+def test_default_command_runs_one_shot_diagnosis(monkeypatch):
+    monkeypatch.setattr(cli, "diagnose_once", lambda options: _status())
+
+    result = runner.invoke(cli.app, ["--no-network"])
+
+    assert result.exit_code == 0
+    assert "API_OR_MODEL_WAITING" in result.output
+    assert "可见线索" in result.output
 
 
-def test_should_notify_all_includes_normal_activity_but_not_idle():
-    assert _should_notify(_status(CodexState.TOOL_RUNNING), notify_all=True)
-    assert not _should_notify(_status(CodexState.IDLE), notify_all=True)
+def test_report_writes_one_shot_markdown(monkeypatch, tmp_path):
+    monkeypatch.setattr(cli, "diagnose_once", lambda options: _status())
+    output = tmp_path / "report.md"
+
+    result = runner.invoke(cli.app, ["report", "--no-network", "-o", str(output)])
+
+    assert result.exit_code == 0
+    assert output.exists()
+    assert "Codex Session Health" in output.read_text(encoding="utf-8")
 
 
-def test_should_notify_stuck_includes_long_running_active_states():
-    assert _should_notify_stuck(_status(CodexState.MODEL_STREAMING))
-    assert _should_notify_stuck(_status(CodexState.TOOL_RUNNING))
-    assert not _should_notify_stuck(_status(CodexState.DONE))
+def test_report_prints_reason_to_terminal(monkeypatch):
+    monkeypatch.setattr(cli, "diagnose_once", lambda options: _status())
+
+    result = runner.invoke(cli.app, ["report", "--no-network"])
+
+    assert result.exit_code == 0
+    assert "Codex Session Health" in result.output
+    assert "可能解释" in result.output
 
 
-def test_notification_message_can_include_duration():
-    message = _notification_message(
-        _status(CodexState.TOOL_RUNNING, Path("/Users/bobby/Documents/codex-doctor")),
-        duration_seconds=61,
-    )
-    assert "当前：" in message
-    assert "项目：codex-doctor" in message
-    assert "堵塞原因" not in message
-    assert "原因：" in message
-    assert "已经 61 秒" in message
-    assert "卡在本地工具执行阶段" in message
+def test_install_saves_language_and_installs_hooks(monkeypatch, tmp_path):
+    installed: dict[str, object] = {}
+
+    monkeypatch.setenv("CODEX_DOCTOR_DATA_DIR", str(tmp_path))
+
+    def fake_install_hooks(scope: str, force: bool) -> Path:
+        installed["scope"] = scope
+        installed["force"] = force
+        return tmp_path / "hooks.json"
+
+    monkeypatch.setattr(cli, "install_hooks", fake_install_hooks)
+
+    result = runner.invoke(cli.app, ["install", "--lang", "en", "--force"])
+
+    assert result.exit_code == 0
+    assert installed == {"scope": "user", "force": True}
+    assert "Language: English" in result.output
 
 
-def test_notification_message_supports_english():
-    message = _notification_message(
-        _status(CodexState.TOOL_RUNNING, Path("/Users/bobby/Documents/codex-doctor")),
-        lang="en",
-        duration_seconds=61,
-    )
-
-    assert message.startswith("Project: codex-doctor Current:")
-    assert "Reason:" in message
-    assert "Suggestion:" in message
-    assert "61s" in message
-
-
-def test_resolve_notify_settings_uses_defaults_without_interactive_prompt():
-    lang, after = _resolve_notify_settings(lang=None, after=None, interactive=False)
-
-    assert lang == "zh"
-    assert after == 45.0
-
-
-def test_resolve_notify_settings_uses_explicit_values():
-    lang, after = _resolve_notify_settings(lang="en", after=30, interactive=False)
-
-    assert lang == "en"
-    assert after == 30.0
-
-
-def test_normalize_after_rejects_non_positive_values():
-    with pytest.raises(typer.Exit):
-        _normalize_after(0)
-
-
-def test_check_notifications_exits_on_failure(monkeypatch):
-    monkeypatch.setattr(
-        cli,
-        "send_notification",
-        lambda title, message: NotificationResult(ok=False, error="failed"),
-    )
-
-    with pytest.raises(typer.Exit):
-        _check_notifications_or_exit()
+def test_normalize_lang_accepts_chinese_alias():
+    assert _normalize_lang("中文") == "zh"

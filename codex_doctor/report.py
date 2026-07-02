@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from collections import Counter
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .schemas import Event, NetworkProbe
 from .state_machine import diagnose
 from .storage import Storage
+
+if TYPE_CHECKING:
+    from .current_status import CurrentStatus
 
 
 def generate_report(session_id: str | None = None, last: bool = False) -> str:
@@ -14,7 +18,7 @@ def generate_report(session_id: str | None = None, last: bool = False) -> str:
     if session is not None:
         session_id = session["id"]
     if not session_id:
-        return "# Codex Doctor Report\n\nNo session has been recorded yet.\n"
+        return "# Codex Session Health\n\nNo session has been recorded yet.\n"
 
     event_rows = list(reversed(storage.list_recent_events(session_id=session_id, limit=500)))
     events = [_event_from_row(row) for row in event_rows]
@@ -25,7 +29,7 @@ def generate_report(session_id: str | None = None, last: bool = False) -> str:
     latest_tool = next((event for event in reversed(events) if event.tool_name), None)
 
     lines = [
-        "# Codex Doctor Report",
+        "# Codex Session Health",
         "",
         "## Summary",
         "",
@@ -103,6 +107,81 @@ def generate_report(session_id: str | None = None, last: bool = False) -> str:
 
 def write_report(path: Path, session_id: str | None = None, last: bool = False) -> Path:
     path.write_text(generate_report(session_id=session_id, last=last), encoding="utf-8")
+    return path
+
+
+def generate_current_report(status: CurrentStatus, *, lang: str = "zh") -> str:
+    from .messages import describe_status
+
+    message = describe_status(status, lang=lang)
+    lines = [
+        "# Codex Session Health",
+        "",
+        "## Summary",
+        "",
+        f"- Session: {status.session_id}",
+        f"- Source: {status.source}",
+        f"- State: {status.diagnosis.state}",
+        f"- Confidence: {status.diagnosis.confidence.value}",
+    ]
+    if status.project_path:
+        lines.append(f"- Project: {status.project_path}")
+    lines.extend(
+        [
+            "",
+            "## Diagnosis",
+            "",
+            f"- Current: {message.current}",
+            f"- Reason: {message.reason}",
+            f"- Suggestion: {message.action}",
+            "",
+            "## Evidence",
+            "",
+            status.diagnosis.explanation,
+        ]
+    )
+    if status.diagnosis.evidence:
+        lines.extend(["", "| Key | Value |", "|---|---|"])
+        for key, value in status.diagnosis.evidence.items():
+            lines.append(f"| {key} | `{value}` |")
+
+    lines.extend(["", "## Network", ""])
+    if status.network_probe:
+        probe = status.network_probe
+        lines.extend(
+            [
+                f"- OpenAI probe: {'healthy' if probe.ok else 'failed'}",
+                f"- Error: {probe.error_type or 'n/a'}",
+                f"- HTTP: {probe.http_code or 'n/a'}",
+                f"- DNS: {_fmt_ms(probe.dns_ms)}",
+                f"- Connect: {_fmt_ms(probe.connect_ms)}",
+                f"- TLS: {_fmt_ms(probe.tls_ms)}",
+                f"- TTFB: {_fmt_ms(probe.ttfb_ms)}",
+                f"- Total: {_fmt_ms(probe.total_ms)}",
+            ]
+        )
+    else:
+        lines.append("Network probe was skipped.")
+
+    if status.app_events:
+        lines.extend(["", "## Recent Visible Codex Events", ""])
+        for event in status.app_events[-12:]:
+            lines.append(f"- {event.ts.isoformat()} `{event.label}`")
+
+    lines.extend(
+        [
+            "",
+            "## Privacy Boundary",
+            "",
+            "This report uses observable local runtime state only. It does not reveal hidden model reasoning.",
+            "",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def write_current_report(path: Path, status: CurrentStatus, *, lang: str = "zh") -> Path:
+    path.write_text(generate_current_report(status, lang=lang), encoding="utf-8")
     return path
 
 

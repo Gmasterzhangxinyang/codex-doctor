@@ -1,62 +1,91 @@
 # Codex Doctor
 
-[![CI](https://github.com/Gmasterzhangxinyang/codex-doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/Gmasterzhangxinyang/codex-doctor/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-3776AB)](https://www.python.org/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Local First](https://img.shields.io/badge/privacy-local--first-10A37F)](docs/privacy.md)
+[![Status](https://img.shields.io/badge/status-alpha-orange)](CHANGELOG.md)
 
 ![Codex Doctor banner](docs/assets/banner.svg)
 
-Know why Codex is thinking.
+Check visible Codex session health from your terminal.
 
-Codex Doctor is a local-first stuck notifier for Codex App. When Codex appears to be thinking for too long, it sends a macOS notification with the likely reason: network, API/model latency, approval, local tools, context compaction, sandbox policy, or a long-running command.
+Codex Doctor is a small, local-first health-check CLI for Codex sessions. It does
+not run a daemon, poll in the background, or upload data. When Codex feels stuck,
+run one command to see the latest visible evidence: recent event age, tool calls,
+network probe result, approval hints, sandbox errors, and a conservative possible
+explanation.
 
-It does not read or reveal hidden model reasoning. It diagnoses observable runtime state only.
+Codex Doctor only reports observable runtime state. It never tries to reveal
+hidden model reasoning, and it avoids pretending to know what the model is
+thinking.
 
-## Why This Exists
-
-Sometimes Codex keeps showing `thinking` and the user has no idea what is happening.
-
-Codex Doctor turns that vague state into a concrete diagnosis:
-
-```text
-Codex is running pytest, elapsed 7m32s, CPU 91%.
-This is not a network issue.
-```
-
-or:
-
-```text
-Network looks healthy. api.openai.com returned 401 in 0.44s.
-Codex is likely waiting for API/model response.
-```
-
-or:
-
-```text
-Codex is waiting for your approval.
-Check the Codex UI for a permission prompt.
-```
-
-## Features
-
-- Focused stuck feedback with `codex-doctor notify`.
-- Best-effort Codex App activity detection from local session metadata.
-- OpenAI network probe to separate connectivity issues from API/model waiting.
-- macOS notifications when a stuck reason is detected.
-- Local-first privacy model: no hidden reasoning, prompt text, or API keys are collected.
-
-## Install
+## Quick Start
 
 ```bash
 pipx install codex-doctor
 codex-doctor install
 ```
 
-`codex-doctor install` sends a test macOS notification. If the popup channel is
-not working, install fails instead of pretending Codex Doctor is ready.
+When Codex looks stuck:
 
-For local development:
+```bash
+codex-doctor
+```
+
+Terminal output is intentionally direct:
+
+```text
+可见状态: TOOL_RUNNING
+可信度: MEDIUM
+可见线索: 可见事件显示 Codex 进入过本地工具阶段。
+可能解释: 检测到工具 exec_command 已经启动，还有 2 个工具调用没看到完成输出。
+下一步: 检查对应终端/命令是否还在运行；如果已结束，可能是日志事件尚未完整写入。
+
+证据:
+- 距最近线索: 8s
+- 工具: exec_command
+- 未见完成输出的工具调用: 2
+```
+
+## What It Answers
+
+Codex Doctor is useful for quick health-check questions like:
+
+- Has the latest visible event stopped updating?
+- Is the local command or tool still running?
+- Is there a permission approval waiting in the UI?
+- Did a sandbox or filesystem permission block the task?
+- Is the OpenAI endpoint unreachable because of DNS, proxy, VPN, TLS, or network trouble?
+- What visible evidence supports the current status?
+
+It does not explain hidden chain-of-thought. The output is a conservative summary
+of local events, tool status, session metadata, and a one-time network probe.
+
+## Install
+
+Recommended:
+
+```bash
+pipx install codex-doctor
+codex-doctor install
+```
+
+During install, choose the default output language:
+
+```text
+1. 中文
+2. English
+选择语言 / Choose language [1/2/zh/en]
+```
+
+Non-interactive install:
+
+```bash
+codex-doctor install --lang zh
+codex-doctor install --lang en
+```
+
+Local development:
 
 ```bash
 git clone https://github.com/Gmasterzhangxinyang/codex-doctor.git
@@ -64,147 +93,183 @@ cd codex-doctor
 python -m pip install -e ".[dev]"
 ```
 
-## Quick Start
+## Usage
 
-For Codex App users, run the small stuck notifier:
-
-```bash
-codex-doctor notify
-```
-
-Startup asks for two choices:
-
-```text
-1. 中文
-2. English
-选择语言 / Choose language [1/2/zh/en]
-超过多少秒提醒 / Notify after seconds [45]
-```
-
-Test whether macOS notifications are actually allowed on your machine:
+Run the default one-shot health check:
 
 ```bash
-codex-doctor notify --test
+codex-doctor
 ```
 
-Make it report faster:
-
-```bash
-codex-doctor notify --after 20
-```
-
-Skip startup choices with explicit options:
-
-```bash
-codex-doctor notify --lang zh --after 30
-codex-doctor notify --lang en --after 60
-```
-
-That is the main workflow: keep it open while using Codex App. It sends a macOS
-notification only when Codex Doctor thinks Codex is stuck and can explain why.
-If macOS notifications are blocked, Codex Doctor prints the stuck feedback in
-the terminal instead of pretending the popup worked.
-
-Notification text is intentionally simple Chinese:
-
-```text
-项目：codex-doctor
-当前：Codex 已经 61 秒卡在本地工具执行阶段。
-原因：检测到工具 exec_command 已经启动，但还没看到完成输出。
-建议：看终端/工具是否还在跑；可能是测试、构建、shell 命令或文件操作耗时。
-```
-
-When several Codex App projects are open, the notification includes the project
-name from the local session `cwd`. `diagnose` also shows the full project path.
-
-For a one-shot debug check:
+Use the explicit command form:
 
 ```bash
 codex-doctor diagnose
 ```
 
-Advanced debug commands such as `diagnose`, `monitor`, `watch`, `run`, and `report`
-are kept for maintainers, but the product surface is `codex-doctor notify`.
+Print a concise terminal report:
+
+```bash
+codex-doctor report
+```
+
+Write a Markdown report only when you ask for a file:
+
+```bash
+codex-doctor report -o codex-report.md
+codex-doctor diagnose -o codex-report.md
+```
+
+Override language for one run:
+
+```bash
+codex-doctor diagnose --lang zh
+codex-doctor diagnose --lang en
+codex-doctor report --lang zh
+codex-doctor report --lang en
+```
+
+Skip the network probe when you only want local evidence:
+
+```bash
+codex-doctor --no-network
+codex-doctor report --no-network
+```
+
+Check the local setup:
+
+```bash
+codex-doctor doctor
+```
+
+## Install Troubleshooting
+
+If `codex-doctor install --lang zh` says `No such option: --lang`, or
+`codex-doctor` says `Missing command`, your shell is probably running an older
+entry point from another Python environment.
+
+Check what is being executed:
+
+```bash
+which codex-doctor
+codex-doctor --help
+codex-doctor install --help
+```
+
+Refresh the shell command cache and reinstall from this checkout:
+
+```bash
+hash -r
+python -m pip install -e .
+```
+
+You can also run the module entry point directly:
+
+```bash
+python -m codex_doctor install --lang zh
+python -m codex_doctor
+```
+
+## Commands
+
+| Command | Purpose |
+|---|---|
+| `codex-doctor install` | Install lightweight hooks and choose default language. |
+| `codex-doctor` | Run the default one-shot health check. |
+| `codex-doctor diagnose` | Same health check with explicit options. |
+| `codex-doctor report` | Print a concise terminal report, or write Markdown with `-o`. |
+| `codex-doctor doctor` | Check Codex CLI, hooks, data directory, and network reachability. |
+| `codex-doctor uninstall` | Remove installed hooks. |
 
 ## Diagnosis States
 
 | State | Meaning |
 |---|---|
-| `NETWORK_SUSPECTED` | DNS, TCP, TLS, proxy, VPN, or firewall may be blocking the request. |
-| `API_OR_MODEL_WAITING` | Network is reachable; Codex is likely waiting on API/model response. |
-| `TOOL_RUNNING` | Codex is waiting for a local command or tool to finish. |
-| `APPROVAL_WAITING` | Codex needs user approval before continuing. |
-| `CONTEXT_COMPACTING` | Codex is compacting long-session context. |
-| `SANDBOX_OR_PERMISSION_BLOCKED` | A command likely hit sandbox or permission policy. |
-| `DONE` | The session stopped normally. |
-| `ERROR` | The session ended with an error signal. |
+| `NETWORK_SUSPECTED` | DNS, TCP, TLS, proxy, VPN, firewall, or routing may be blocking access. |
+| `API_OR_MODEL_WAITING` | Network is reachable; Codex is likely waiting on API/model response or reconnect. |
+| `TOOL_RUNNING` | Codex appears to be waiting for a local command or tool to finish. |
+| `APPROVAL_WAITING` | Codex likely needs a permission approval before continuing. |
+| `CONTEXT_COMPACTING` | Codex is processing or compacting long-session context. |
+| `SANDBOX_OR_PERMISSION_BLOCKED` | A command likely hit sandbox or filesystem permissions. |
+| `DONE` | The latest visible session appears finished. |
+| `IDLE` | No recent Codex activity was found. |
 
-Every diagnosis includes confidence: `HIGH`, `MEDIUM`, or `LOW`.
+Each status includes a confidence level: `HIGH`, `MEDIUM`, or `LOW`. Treat it as a local evidence summary, not ground truth about model reasoning.
 
-## How It Works
+## Architecture
 
-Codex Doctor combines local evidence sources:
+Codex Doctor is intentionally small:
 
-1. Codex lifecycle hooks.
-2. PTY wrapper terminal activity.
-3. Local process-tree samples.
-4. OpenAI network probes.
-
-Those signals feed a small state machine that emits stuck feedback.
-When Codex App does not emit hooks for a visible App session, Codex Doctor falls
-back to the latest local session file and reads only safe event metadata such as
-`reasoning`, `function_call`, and `function_call_output`.
-
-See [Architecture](docs/architecture.md) and [Event Model](docs/events.md).
-
-## Privacy Model
-
-Codex Doctor is local-first.
-
-- No cloud upload.
-- No API key interception.
-- No hidden chain-of-thought access.
-- No network request from hooks.
-- OpenAI probes do not send credentials.
-- Prompt and tool content are redacted and truncated by default.
-- Tool input is stored as a small snippet plus SHA-256 hash.
-
-See [Privacy](docs/privacy.md) and [Security Policy](SECURITY.md).
-
-## Commands
-
-```bash
-codex-doctor install
-codex-doctor notify
-codex-doctor notify --test
-codex-doctor notify --lang zh --after 30
-codex-doctor notify --after 20
-codex-doctor diagnose
-codex-doctor uninstall
+```text
+codex_doctor/
+  cli.py              CLI commands and language selection
+  one_shot.py         one-shot health-check/report orchestration
+  current_status.py   combines local evidence into current status
+  app_monitor.py      reads safe Codex App session metadata
+  hook_recorder.py    records redacted hook events
+  state_machine.py    classifies observable state
+  network_probe.py    curl-first OpenAI connectivity probe
+  messages.py         human-readable zh/en explanations
+  report.py           optional Markdown report generation
+  storage.py          local SQLite + JSONL storage
+  redaction.py        sensitive-content redaction
 ```
 
-## Optional Codex Plugin
+The core flow:
 
-The optional plugin package lives in [`plugin/`](plugin/). It provides lifecycle hooks and a `diagnose-codex` skill. The notifier remains the main user-facing workflow.
+1. Read safe local evidence from Codex App metadata and Codex Doctor hooks.
+2. Redact sensitive content before storage.
+3. Classify the visible state with a small state machine.
+4. Run one OpenAI network probe unless disabled.
+5. Print a terminal health summary or write a Markdown report.
 
-See [Plugin Install](docs/plugin-install.md).
+No daemon. No polling loop. No background alerts. No cloud upload.
+
+## Privacy And Safety
+
+Codex Doctor is built around one rule: diagnose only what is observable.
+
+- No hidden chain-of-thought access.
+- No cloud upload.
+- No API key interception.
+- No network request from hooks.
+- No prompt replay.
+- Prompt/tool content is redacted and truncated.
+- Network probes do not send credentials.
+- Data stays in the local user data directory unless you remove it.
+
+See [Privacy](docs/privacy.md) and [Security](SECURITY.md).
 
 ## Development
 
 ```bash
 python -m pip install -e ".[dev]"
-python -m ruff check .
 python -m pytest
-python -m build
+python -m ruff check .
 ```
 
-## Roadmap
+Useful local checks:
 
-See [Roadmap](docs/roadmap.md).
+```bash
+python -m compileall codex_doctor tests
+codex-doctor --no-network
+codex-doctor report --no-network
+```
 
 ## Contributing
 
-Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), especially the privacy and safety boundaries.
+Contributions are welcome. Good first areas:
+
+- More precise state-machine tests.
+- Additional redaction fixtures.
+- Better network error classification.
+- Clearer Chinese and English diagnosis messages.
+- Docs improvements and real-world troubleshooting examples.
+
+Please keep changes aligned with the privacy boundary: no hidden reasoning, no
+cloud upload, and no long-running background process in the main product path.
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening larger changes.
 
 ## Uninstall
 
@@ -212,7 +277,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md), espec
 codex-doctor uninstall
 ```
 
-Historical data is kept unless explicitly purged:
+Remove local data too:
 
 ```bash
 codex-doctor uninstall --purge-data

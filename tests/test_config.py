@@ -21,3 +21,11 @@ def test_ensure_user_data_dir_falls_back_when_default_is_not_writable(monkeypatc
 
     assert config.ensure_user_data_dir() == fallback
     assert fallback.exists()
+
+
+def test_settings_round_trip(monkeypatch, tmp_path):
+    monkeypatch.setenv("CODEX_DOCTOR_DATA_DIR", str(tmp_path))
+
+    config.save_settings({"lang": "en"})
+
+    assert config.load_settings()["lang"] == "en"

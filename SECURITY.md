@@ -14,12 +14,12 @@ Please do not open public issues containing secrets, private prompts, command ou
 
 ## Security Model
 
-Codex Doctor is local-first and should not upload user prompts, code, command output, API keys, or reports.
+Codex Doctor is local-first and should not upload user prompts, code, command output, API keys, reports, or local session evidence.
 
 Expected behavior:
 
 - Hooks must fail closed and exit 0 so they do not break Codex.
 - Network probes must not send API keys.
-- Reports must be generated locally.
+- Health summaries and reports must be generated locally.
 - Secret-looking fields must be redacted.
 - Hidden model reasoning must never be requested, inferred as content, or displayed.

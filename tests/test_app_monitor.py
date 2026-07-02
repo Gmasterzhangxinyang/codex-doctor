@@ -79,3 +79,41 @@ def test_app_activity_detects_open_function_call(tmp_path):
     diagnosis = diagnose_app_activity(activity)
 
     assert diagnosis.state == CodexState.TOOL_RUNNING
+
+
+def test_app_activity_does_not_treat_unmatched_output_as_open_tool(tmp_path):
+    session_dir = tmp_path / ".codex" / "sessions"
+    session_dir.mkdir(parents=True)
+    rollout = session_dir / "rollout-demo.jsonl"
+    rollout.write_text(
+        "\n".join(
+            [
+                json.dumps(
+                    {
+                        "timestamp": "2026-07-01T08:00:00.000Z",
+                        "type": "response_item",
+                        "payload": {
+                            "type": "function_call",
+                            "name": "exec_command",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "timestamp": "2026-07-01T08:00:01.000Z",
+                        "type": "response_item",
+                        "payload": {
+                            "type": "function_call_output",
+                            "output": "private output",
+                        },
+                    }
+                ),
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    activity = latest_app_activity(tmp_path / ".codex")
+    diagnosis = diagnose_app_activity(activity)
+
+    assert diagnosis.state != CodexState.TOOL_RUNNING

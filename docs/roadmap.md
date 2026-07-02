@@ -1,29 +1,22 @@
 # Roadmap
 
-## v0.1
+## Current Focus
 
-- Python CLI.
-- Hook recorder.
-- SQLite and JSONL storage.
-- State machine diagnostics.
-- curl-first OpenAI network probe.
-- PTY wrapper mode.
-- Rich watch dashboard.
-- Markdown reports.
-- Optional Codex plugin package.
-- Codex App fallback diagnosis from local rollout metadata.
-- One-shot `diagnose` and lightweight `monitor --notify`.
+- Keep `codex-doctor` as a one-shot session health check.
+- Show evidence before interpretation.
+- Avoid claims about hidden model reasoning.
+- Keep hooks fast and local.
 
-## v0.2
+## Near Term
 
-- OpenTelemetry ingestion as a secondary evidence source.
-- More precise API request and stream timing.
-- Textual-based dashboard.
-- Session timeline export.
-- Richer sandbox and approval diagnostics.
+- More precise event-age display.
+- Better handling of parallel tool calls.
+- More state-machine fixtures from real sessions.
+- Clearer `LOW` vs `MEDIUM` confidence wording.
+- Safer Markdown report output that mirrors terminal health summaries.
 
 ## Later
 
-- VS Code extension.
-- Web dashboard.
-- Cross-agent adapters for other terminal AI coding tools.
+- Optional integrations for other local AI coding tools.
+- More robust local metadata readers.
+- Additional troubleshooting examples from real-world sessions.
